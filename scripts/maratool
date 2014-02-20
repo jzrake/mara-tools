@@ -11,6 +11,7 @@ try:
 except ImportError:
     pass
 
+
 import sys
 import argparse
 import numpy as np
@@ -19,6 +20,8 @@ from mara_tools import gaussfield
 from mara_tools import chkptlog
 from mara_tools import synchsky
 from mara_tools import genchkpt
+from mara_tools import cutplanes
+
 
 def cmd_gaussian_bfield():
     parser = argparse.ArgumentParser()
@@ -63,6 +66,7 @@ def cmd_show_log():
     chkpt.plot_fields(['mag', 'kin'])
 
 
+
 def cmd_synchsky():
     parser = argparse.ArgumentParser()
     parser.add_argument("filename")
@@ -83,6 +87,17 @@ def cmd_synchsky():
         stokes = synchsky.StokesVectorsImage()
         stokes.load(args.filename)
         stokes.make_figures2()
+
+
+
+def cmd_cutplanes():
+    cls = cutplanes.MaraCheckpointCutplaneExtractor
+    parser = argparse.ArgumentParser()
+    get_kwargs = cls.populate_parser('plot_slice', parser)
+    parser.add_argument("filename")
+    pargs = parser.parse_args()
+    chkpt = cls(pargs.filename)
+    chkpt.plot_slice(**get_kwargs(pargs))
 
 
 

@@ -219,6 +219,7 @@ def logmethod(theMethod, displayName=None):
         indent -= 1
         
         return returnval
+    _methodWrapper._wrapped_method = theMethod
     return _methodWrapper
 
 
