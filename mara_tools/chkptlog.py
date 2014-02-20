@@ -1,8 +1,10 @@
 from matplotlib import pyplot as plt
+from autolog import logmethod
 
 class MaraCheckpointLoggedData(object):
+
+    @logmethod
     def __init__(self, fname):
-        print "loading", fname
         from h5py import File
         from numpy import array, log10
         import json

@@ -1,16 +1,19 @@
+import itertools
+import numpy as np
+import h5py
+import matplotlib.pyplot as plt
+from autolog import logmethod
+
+
 """
 Synchrotron visualization of the HDF5 data, with loading the data one row at a
 time to allow for processing large files.
 """
 
-import itertools
-import numpy as np
-import h5py
-import matplotlib.pyplot as plt
-
 
 class StokesMaraCheckpointFile(object):
 
+    @logmethod
     def __init__(self, filename):
         self.h5file = h5py.File(filename, 'r')
         if 'prim' not in self.h5file:
@@ -34,6 +37,7 @@ class StokesMaraCheckpointFile(object):
         fp=np.sqrt(sq**2.0+su**2.0)/si
         return si, sq, su, fp
 
+    @logmethod
     def stokes_image(self, axis=0):
         """
         Return the Stokes vector components I, Q, U, and polarization fraction
@@ -99,6 +103,7 @@ class StokesMaraCheckpointFile(object):
 
 class StokesVectorsImage(object):
 
+    @logmethod
     def __init__(self, I=None, Q=None, U=None, P=None, axis=None, filename=None):
         self.I = I
         self.Q = Q
@@ -107,8 +112,8 @@ class StokesVectorsImage(object):
         self.axis = axis
         self.filename = str(filename)
 
+    @logmethod
     def load(self, filename):
-        print "loading skymap from", filename
         h5file = h5py.File(filename, 'r')
         self.I = h5file['stokes-I'][:]
         self.Q = h5file['stokes-Q'][:]
@@ -117,8 +122,8 @@ class StokesVectorsImage(object):
         self.axis = h5file.attrs['axis']
         self.filename = h5file.attrs['filename']
 
+    @logmethod
     def save(self, outfile):
-        print "saving skymap to", outfile
         outf = h5py.File(outfile, 'w')
         outf['stokes-I'] = self.I
         outf['stokes-Q'] = self.Q
@@ -128,6 +133,7 @@ class StokesVectorsImage(object):
         outf.attrs['axis'] = self.axis
         outf.close()
 
+    @logmethod
     def make_figures1(self):
         si, sq, su, fp = self.I, self.Q, self.U, self.P
         plt.figure(figsize=(15,3))
@@ -143,6 +149,7 @@ class StokesVectorsImage(object):
         plt.hist(fp.flatten(),100,range=(0.0,1.0),histtype='step',normed=1)
         plt.show()   
 
+    @logmethod
     def make_figures2(self):
         si, sq, su, fp = self.I, self.Q, self.U, self.P
         plt.figure(figsize=(10,12))

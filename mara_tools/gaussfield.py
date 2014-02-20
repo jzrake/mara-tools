@@ -1,5 +1,5 @@
 import numpy as np
-
+from autolog import logmethod
 
 class GaussianRandomVectorField3d(object):
     """
@@ -8,6 +8,7 @@ class GaussianRandomVectorField3d(object):
     series. It cannot be perturbed stochastically like the StochasticVectorField
     classes.
     """
+    @logmethod
     def __init__(self, size, rms=1.0, Pofk=None):
         A = np.random.uniform(-0.5, 0.5, [3] + [size]*3)
         Ak = np.zeros(A.shape, dtype=complex)
@@ -28,11 +29,13 @@ class GaussianRandomVectorField3d(object):
         self._parseval_factor = parseval_factor
         self._rms = rms
 
+    @logmethod
     def root_mean_square(self):
         Ax = self.get_field()
         Pxs = np.abs(Ax[0])**2 + np.abs(Ax[1])**2 + np.abs(Ax[2])**2
         return Pxs.mean()**0.5
 
+    @logmethod
     def get_field(self, zeta=None):
         Ak = self._Ak
         Kh = self._Ks / self._K2**0.5
@@ -48,6 +51,7 @@ class GaussianRandomVectorField3d(object):
         Pxs = np.abs(Ax[0])**2 + np.abs(Ax[1])**2 + np.abs(Ax[2])**2
         return self._rms * Ax / Pxs.mean()**0.5
 
+    @logmethod
     def power_spectrum(self, bins=128):
         Ak = self._Ak
         Ks = self._Ks

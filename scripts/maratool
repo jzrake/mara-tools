@@ -1,5 +1,16 @@
 #!/usr/bin/env python
 
+try:
+    # ------------------------------------------------------------------
+    # If running the script from somewhere else, can add location of the
+    # mara_tools module to maratool_cfg.py by doing
+    #
+    # sys.path += ['/path/containing/mara_tools']
+    # ------------------------------------------------------------------
+    import maratool_cfg
+except ImportError:
+    pass
+
 import sys
 import argparse
 import numpy as np
@@ -8,7 +19,6 @@ from mara_tools import gaussfield
 from mara_tools import chkptlog
 from mara_tools import synchsky
 from mara_tools import genchkpt
-
 
 def cmd_gaussian_bfield():
     parser = argparse.ArgumentParser()
@@ -70,7 +80,7 @@ def cmd_synchsky():
         if args.show:
             stokes.make_figures2()
     except RuntimeError:
-        stokes = StokesVectorsImage()
+        stokes = synchsky.StokesVectorsImage()
         stokes.load(args.filename)
         stokes.make_figures2()
 
