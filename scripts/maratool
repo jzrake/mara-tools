@@ -7,30 +7,41 @@ import h5py
 from mara_tools import gaussfield
 from mara_tools import chkptlog
 from mara_tools import synchsky
+from mara_tools import genchkpt
 
 
 def cmd_gaussian_bfield():
     parser = argparse.ArgumentParser()
-    parser.add_argument("filename")
+    parser.add_argument("-o", "--outfile",
+                        help="output HDF5 file name", default="chkpt.0000.h5")
     parser.add_argument("--rms", type=float,
                         help="RMS value of magnetic field", default=1.0)
+    parser.add_argument("-N", "--resolution", type=int,
+                        help="domain resulution (N^3)", default=32)
     args = parser.parse_args()
 
     def small_scale(k):
         k0 = 0.01
         return pow(k,12) * np.exp(-k/k0);
 
-    chkpt = h5py.File(args.filename)
-    N = chkpt['prim']['rho'].shape[0]
-
+    N = args.resolution
+    chkpt = genchkpt.MaraCheckpointCreator(args.outfile, [N,N,N], mhd=True)
     field = gaussfield.GaussianRandomVectorField3d(N, rms=args.rms,
                                                    Pofk=small_scale)
     B = field.get_field(zeta=1.0)
 
-    chkpt['prim']['Bx'][...] = B[0]
-    chkpt['prim']['By'][...] = B[1]
-    chkpt['prim']['Bz'][...] = B[2]
-    chkpt.close()
+    def callback(prim):
+        prim['pre'][:] = 1.0
+        prim['rho'][:] = 1.0
+        prim['vx'][:] = 0.0
+        prim['vy'][:] = 0.0
+        prim['vz'][:] = 0.0
+        prim['Bx'][:] = B[0]
+        prim['By'][:] = B[1]
+        prim['Bz'][:] = B[2]
+
+    chkpt.apply_initial_data(callback)
+
 
 
 def cmd_show_log():
@@ -62,6 +73,7 @@ def cmd_synchsky():
         stokes = StokesVectorsImage()
         stokes.load(args.filename)
         stokes.make_figures2()
+
 
 
 if __name__ == "__main__":
