@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+
+import sys
+import argparse
+import numpy as np
+import h5py
+from mara_tools import gaussfield
+from mara_tools import chkptlog
+from mara_tools import synchsky
+
+
+def cmd_gaussian_bfield():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+    parser.add_argument("--rms", type=float,
+                        help="RMS value of magnetic field", default=1.0)
+    args = parser.parse_args()
+
+    def small_scale(k):
+        k0 = 0.01
+        return pow(k,12) * np.exp(-k/k0);
+
+    chkpt = h5py.File(args.filename)
+    N = chkpt['prim']['rho'].shape[0]
+
+    field = gaussfield.GaussianRandomVectorField3d(N, rms=args.rms,
+                                                   Pofk=small_scale)
+    B = field.get_field(zeta=1.0)
+
+    chkpt['prim']['Bx'][...] = B[0]
+    chkpt['prim']['By'][...] = B[1]
+    chkpt['prim']['Bz'][...] = B[2]
+    chkpt.close()
+
+
+def cmd_show_log():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+    args = parser.parse_args()
+
+    chkpt = chkptlog.MaraCheckpointLoggedData(args.filename)
+    chkpt.plot_fields(['mag', 'kin'])
+
+
+def cmd_synchsky():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+    parser.add_argument("-o", "--outfile", type=str,
+                        help="output HDF5 file name", default="synchsky.h5")
+    parser.add_argument("-a", "--axis", type=int, choices=[0,1,2], default=0,
+                        help="output HDF5 file name")
+    parser.add_argument("--show", action="store_true")
+    args = parser.parse_args()
+
+    try:
+        chkpt = synchsky.StokesMaraCheckpointFile(args.filename)
+        stokes = chkpt.stokes_image(axis=args.axis)
+        stokes.save(args.outfile)
+        if args.show:
+            stokes.make_figures2()
+    except RuntimeError:
+        stokes = StokesVectorsImage()
+        stokes.load(args.filename)
+        stokes.make_figures2()
+
+
+if __name__ == "__main__":
+
+    cmds = [c for c in dir() if c.startswith('cmd_')]
+
+    if len(sys.argv) > 1 and 'cmd_' + sys.argv[1] in cmds:
+        cmd = 'cmd_' + sys.argv[1]
+        del sys.argv[1]
+        exec(cmd + "()")
+    else:
+        print "commands are:"
+        print "\t" + "\n\t".join([c[4:] for c in cmds])
+
