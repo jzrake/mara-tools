@@ -10,23 +10,23 @@ class GaussianRandomVectorField3d(object):
     """
     @logmethod
     def __init__(self, size, rms=1.0, Pofk=None):
-        A = np.random.uniform(-0.5, 0.5, [3] + [size]*3)
-        Ak = np.zeros(A.shape, dtype=complex)
-        Ks = np.zeros(A.shape, dtype=float)
-        parseval_factor = (6*np.pi)**0.5 # ratio of <|Ak|^2> / <|Ax|^2>
-        for a in range(3): Ak[a] = np.fft.fftn(A[a])
+        Ax = np.random.uniform(-0.5, 0.5, [3] + [size]*3)
+        Ks = np.zeros(Ax.shape, dtype=float)
+        Ak = np.fft.fftn(Ax, axes=[1,2,3])
+        Ak[:,size/2,:,:] = 0.0
+        Ak[:,:,size/2,:] = 0.0
+        Ak[:,:,:,size/2] = 0.0
         Ks[0] = np.fft.fftfreq(size)[:,None,None]
         Ks[1] = np.fft.fftfreq(size)[None,:,None]
         Ks[2] = np.fft.fftfreq(size)[None,None,:]
         K2 = np.abs(Ks[0])**2 + np.abs(Ks[1])**2 + np.abs(Ks[2])**2
         K2[0,0,0] = 1.0 # prevent divide-by-zero
-        if Pofk is None: Pofk = lambda k: k
+        if Pofk is None: Pofk = lambda k: 1.0
         Pk = Pofk(K2**0.5)
-        for a in range(3): Ak[a] *= (Pk / K2)**0.5
+        Ak *= (Pk / K2)**0.5
         self._Ak = Ak
         self._Ks = Ks
         self._K2 = K2
-        self._parseval_factor = parseval_factor
         self._rms = rms
 
     @logmethod
@@ -35,33 +35,73 @@ class GaussianRandomVectorField3d(object):
         Pxs = np.abs(Ax[0])**2 + np.abs(Ax[1])**2 + np.abs(Ax[2])**2
         return Pxs.mean()**0.5
 
+    def helmholtz(self):
+        """
+        Return the dilatational and solenoidals parts of the Fourier
+        representation of the field
+        """
+        return helmholtz(self._Ak, self._Ks)
+
     @logmethod
     def get_field(self, zeta=None):
-        Ak = self._Ak
-        Kh = self._Ks / self._K2**0.5
-        if zeta:
-            # ----------------------------------
-            # dilatational and solenoidals parts
-            # ----------------------------------
-            Dk = (Ak[0]*Kh[0] + Ak[1]*Kh[1] + Ak[2]*Kh[2]) * Kh
-            Sk = Ak - Dk
-            Ax = np.fft.ifftn(zeta * Sk + (1.0 - zeta) * Dk).real
+        if zeta is not None:
+            Dk, Sk = self.helmholtz()
+            Cx = np.fft.ifftn(zeta * Sk + (1.0 - zeta) * Dk, axes=[1,2,3])
         else:
-            Ax = np.fft.ifftn(Ak).real
-        Pxs = np.abs(Ax[0])**2 + np.abs(Ax[1])**2 + np.abs(Ax[2])**2
+            Cx = np.fft.ifftn(self._Ak, axes=[1,2,3])
+        Ax = Cx.real
+        Pxs = Ax[0]**2 + Ax[1]**2 + Ax[2]**2
         return self._rms * Ax / Pxs.mean()**0.5
 
     @logmethod
-    def power_spectrum(self, bins=128):
-        Ak = self._Ak
-        Ks = self._Ks
-        Ps = (np.abs(Ak[0])**2 + np.abs(Ak[1])**2 + np.abs(Ak[2])**2).flatten()
-        K2 = (np.abs(Ks[0])**2 + np.abs(Ks[1])**2 + np.abs(Ks[2])**2).flatten()
-        vals, bins = np.histogram(K2**0.5, weights=Ps, bins=bins)
-        dP = vals
-        dk = 1.0 * (bins[1:] - bins[:-1])
-        k0 = 0.5 * (bins[1:] + bins[:-1])
-        return k0, dP/dk
+    def power_spectrum(self, bins=128, zeta=None):
+        if zeta is not None:
+            Dk, Sk = self.helmholtz()
+            Ak = zeta * Sk + (1.0 - zeta) * Dk
+        else:
+            Ak = self._Ak
+        return power_spectrum(None, Ak=Ak, Ks=self._Ks, bins=bins)
+
+
+
+def helmholtz(Ak, Ks):
+    """
+    Return the dilatational and solenoidals parts of the Fourier
+    representation of the field
+    """
+    K2 = Ks[0]**2 + Ks[1]**2 + Ks[2]**2; K2[0,0,0] = 1.0
+    Kh = Ks / K2**0.5
+    Dk = (Ak[0]*Kh[0] + Ak[1]*Kh[1] + Ak[2]*Kh[2]) * Kh
+    Sk = Ak - Dk
+    return Dk, Sk
+
+
+def power_spectrum(Ax, Ak=None, Ks=None, bins=128):
+    if Ks is None:
+        s = Ax.shape if Ax is not None else Ak.shape
+        Ks = np.zeros(s, dtype=float)
+        Ks[0] = np.fft.fftfreq(s[1])[:,None,None]
+        Ks[1] = np.fft.fftfreq(s[2])[None,:,None]
+        Ks[2] = np.fft.fftfreq(s[3])[None,None,:]
+    if Ak is None:
+        Ak = np.fft.fftn(Ax, axes=[1,2,3])
+
+    K2 = Ks[0]**2 + Ks[1]**2 + Ks[2]**2; K2[0,0,0] = 1.0
+    Dk, Sk = helmholtz(Ak, Ks)
+
+    PsD = np.abs(Dk[0])**2 + np.abs(Dk[1])**2 + np.abs(Dk[2])**2
+    PsS = np.abs(Sk[0])**2 + np.abs(Sk[1])**2 + np.abs(Sk[2])**2
+
+    valsD, bins = np.histogram(K2**0.5, weights=PsD, bins=bins)
+    valsS, bins = np.histogram(K2**0.5, weights=PsS, bins=bins)
+
+    dPD = valsD
+    dPS = valsS
+    dk = 1.0 * (bins[1:] - bins[:-1])
+    k0 = 0.5 * (bins[1:] + bins[:-1])
+
+    return k0, dPD/dk, dPS/dk
+
 
 
 if __name__ == "__main__":
@@ -70,14 +110,19 @@ if __name__ == "__main__":
     """
     import matplotlib.pyplot as plt
     p = -5./3.
-    field = FixedGaussianField3d(64, rms=4.0, Pofk=lambda k: k**p)
-    A = field.get_field()
-    print field.root_mean_square()
-    k, P = field.power_spectrum()
+    field = GaussianRandomVectorField3d(128, rms=4.0, Pofk=lambda k: k**p)
+    A = field.get_field(zeta=1.0)
+    #k, PD, PS = field.power_spectrum(zeta=1.0)
+    k, PD, PS = power_spectrum(A)
+    i = np.argmax(PS)
+
     plt.figure()
-    i = np.argmax(P)
-    plt.loglog(k, P)
-    plt.loglog(k, P[i]*(k/k[i])**p)
+    plt.loglog(k, PD, label='dilatational')
+    plt.loglog(k, PS, label='solenoidal')
+    plt.loglog(k, PS[i]*(k/k[i])**p)
+    plt.legend(loc='best')
+    plt.show()
+
     plt.figure()
     plt.imshow(A[0,:,:,0], interpolation='nearest')
     plt.colorbar()
