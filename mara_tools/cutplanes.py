@@ -1,10 +1,10 @@
-import inspect
 import numpy as np
 import h5py
 import matplotlib.pyplot as plt
+from toolbase import MaraTool
 from autolog import logmethod
 
-class MaraCheckpointCutplaneExtractor(object):
+class MaraCheckpointCutplaneExtractor(MaraTool):
     @logmethod
     def __init__(self, filename):
         self._chkpt = h5py.File(filename, 'r')
@@ -25,19 +25,3 @@ class MaraCheckpointCutplaneExtractor(object):
         plt.setp(sax.get_xticklabels(), visible=False)
         plt.setp(sax.get_yticklabels(), visible=False)
         plt.show()
-
-    @classmethod
-    def populate_parser(self, method, parser):
-        f = getattr(self, method)
-        args, varargs, varkw, defaults = inspect.getargspec(f._wrapped_method)
-
-        for arg, default in zip(args[1:], defaults):
-            parser.add_argument("--"+arg, type=type(default), default=default)
-
-        class kwarg_getter(object):
-            def __init__(self, A):
-                self.my_args = A
-            def __call__(self, pargs):
-                return {k:v for k,v in vars(pargs).iteritems()
-                        if k in self.my_args}
-        return kwarg_getter(args)

@@ -21,6 +21,7 @@ from mara_tools import chkptlog
 from mara_tools import synchsky
 from mara_tools import genchkpt
 from mara_tools import cutplanes
+from mara_tools import reductions
 
 
 def cmd_gaussian_bfield():
@@ -98,6 +99,17 @@ def cmd_cutplanes():
     pargs = parser.parse_args()
     chkpt = cls(pargs.filename)
     chkpt.plot_slice(**get_kwargs(pargs))
+
+
+
+def cmd_power_spectrum():
+    cls = reductions.MaraReductionsReader
+    parser = argparse.ArgumentParser()
+    get_kwargs = cls.populate_parser('plot_power_spectra', parser)
+    parser.add_argument("filename")
+    pargs = parser.parse_args()
+    reduc = cls(pargs.filename)
+    reduc.plot_power_spectra(**get_kwargs(pargs))
 
 
 
