@@ -19,10 +19,15 @@ class MaraReductionsReader(MaraTool):
                                         'magnetic-dilatational',
                                         'velocity-solenoidal',
                                         'velocity-dilatational'],
-                           tmin=0.0, tmax=-1.0):
+                           tmin=0.0, tmax=-1.0,
+                           nolegend=False,
+                           title='',
+                           hardcopy='',
+                           skip=1):
         if not which: which = ['magnetic-solenoidal']
-        for dset in self._h5file:
+        for n, dset in enumerate(self._h5file):
             if dset.startswith('pspec'):
+                if not n % skip == 0: continue
                 for w in which:
                     x = self._h5file[dset][w]['binloc']
                     y = self._h5file[dset][w]['binval']
@@ -34,5 +39,12 @@ class MaraReductionsReader(MaraTool):
                         label = dset + " " + w
                     if tmax < 0.0 or (tmin < t < tmax):
                         plt.loglog(x, y, label=label)
-        plt.legend(loc='best')
-        plt.show()
+        if not nolegend:
+            plt.legend(loc='best')
+        plt.xlabel(r'$k$')
+        plt.ylabel(r'$dP/dk$')
+        plt.title(title)
+        if hardcopy:
+            plt.savefig(hardcopy)
+        else:
+            plt.show()
