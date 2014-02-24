@@ -25,6 +25,15 @@ from mara_tools import reductions
 
 
 def cmd_gaussian_bfield():
+
+    def small_scale(k):
+        k0 = 0.01
+        return pow(k,12) * np.exp(-k/k0);
+    def flat(k):
+        return 1.0
+    spectral_shapes = {'small_scale': small_scale,
+                       'flat': flat}
+
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--outfile",
                         help="output HDF5 file name", default="chkpt.0000.h5")
@@ -32,18 +41,15 @@ def cmd_gaussian_bfield():
                         help="RMS value of magnetic field", default=1.0)
     parser.add_argument("-N", "--resolution", type=int,
                         help="domain resulution (N^3)", default=32)
-    parser.add_argument("--comment",
-                        help="string for in new checkpoint under 'comment'")
+    parser.add_argument("--spectrum", type=str, default='small_scale',
+                        choices=spectral_shapes.keys())
     args = parser.parse_args()
 
-    def small_scale(k):
-        k0 = 0.01
-        return pow(k,12) * np.exp(-k/k0);
-
     N = args.resolution
+    PofK = spectral_shapes[args.spectrum]
     chkpt = genchkpt.MaraCheckpointCreator(args.outfile, [N,N,N], mhd=True)
     field = gaussfield.GaussianRandomVectorField3d(N, rms=args.rms,
-                                                   Pofk=small_scale)
+                                                   Pofk=PofK)
     B = field.get_field(zeta=1.0)
 
     def callback(prim):
@@ -57,8 +63,7 @@ def cmd_gaussian_bfield():
         prim['Bz'][:] = B[2]
 
     chkpt.apply_initial_data(callback)
-    if args.comment:
-        chkpt.set_comment(args.comment)
+    chkpt.set_comment(str(vars(args)))
 
 
 def cmd_show_log():

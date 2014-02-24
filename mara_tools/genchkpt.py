@@ -10,8 +10,8 @@ class MaraCheckpointCreator(object):
         chkpt = h5py.File(filename, 'w')
         status = chkpt.require_group("status")
         prim = chkpt.require_group("prim")
-        measure = chkpt.require_dataset("measure", [], dtype='|S3')
-        measure[...] = '[]\0' # json representation of an empty Lua table
+        measure = chkpt.require_dataset("measure", [], dtype='|S2')
+        measure[...] = '[]' # json representation of an empty Lua table
 
         status['Checkpoint'] = 0.0
         status['CurrentTime'] = 0.0
