@@ -43,6 +43,8 @@ def cmd_gaussian_bfield():
                         help="domain resulution (N^3)", default=32)
     parser.add_argument("--spectrum", type=str, default='small_scale',
                         choices=spectral_shapes.keys())
+    parser.add_argument("--toth", action='store_true',
+                        help="Toth-divergenceless field (instead of spectral)")
     args = parser.parse_args()
 
     N = args.resolution
@@ -50,7 +52,10 @@ def cmd_gaussian_bfield():
     chkpt = genchkpt.MaraCheckpointCreator(args.outfile, [N,N,N], mhd=True)
     field = gaussfield.GaussianRandomVectorField3d(N, rms=args.rms,
                                                    Pofk=PofK)
-    B = field.get_field(zeta=1.0)
+    if args.toth:
+        B = field.get_toth_potential_field()
+    else:
+        B = field.get_field(zeta=1.0)
 
     def callback(prim):
         prim['pre'][:] = 1.0

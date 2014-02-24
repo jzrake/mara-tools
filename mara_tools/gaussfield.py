@@ -43,15 +43,49 @@ class GaussianRandomVectorField3d(object):
         return helmholtz(self._Ak, self._Ks)
 
     @logmethod
-    def get_field(self, zeta=None):
+    def get_field(self, zeta=None, kcomp=None):
         if zeta is not None:
             Dk, Sk = self.helmholtz()
-            Cx = np.fft.ifftn(zeta * Sk + (1.0 - zeta) * Dk, axes=[1,2,3])
+            Ak = zeta * Sk + (1.0 - zeta) * Dk
         else:
-            Cx = np.fft.ifftn(self._Ak, axes=[1,2,3])
-        Ax = Cx.real
+            Ak = self._Ak
+        if kcomp is not None:
+            Ak *= self._K2**(kcomp/2.0)
+        Ax = np.fft.ifftn(Ak, axes=[1,2,3]).real
         Pxs = Ax[0]**2 + Ax[1]**2 + Ax[2]**2
         return self._rms * Ax / Pxs.mean()**0.5
+
+    @logmethod
+    def get_toth_potential_field(self):
+        """
+        Return a Gaussian random field which is divergenceless according to the
+        corner-centered stencil of Toth (2000)
+        """
+        A = self.get_field(kcomp=-1.0)
+
+        def ct(a, sx, sy):
+            F = -0.5*(a + sx(a,-1))
+            G = +0.5*(a + sy(a,-1))
+            fxby = 2*F+sy(F,-1)+sy(F,+1)-G-sx(G,-1)-sy(G,+1)-sx(sy(G,+1),-1)
+            fybx = 2*G+sx(G,-1)+sx(G,+1)-F-sy(F,-1)-sx(F,+1)-sy(sx(F,+1),-1)
+            return fxby, fybx
+
+        FxBy, FyBx = ct(A[2],
+                        lambda f,i: np.roll(f, i, axis=0),
+                        lambda f,i: np.roll(f, i, axis=1))
+        FyBz, FzBy = ct(A[0],
+                        lambda f,i: np.roll(f, i, axis=1),
+                        lambda f,i: np.roll(f, i, axis=2))
+        FzBx, FxBz = ct(A[1],
+                        lambda f,i: np.roll(f, i, axis=2),
+                        lambda f,i: np.roll(f, i, axis=0))
+
+        B = np.zeros_like(A)
+        B[0] = FyBx - np.roll(FyBx, 1, axis=1) + FzBx - np.roll(FzBx, 1, axis=2)
+        B[1] = FzBy - np.roll(FzBy, 1, axis=2) + FxBy - np.roll(FxBy, 1, axis=0)
+        B[2] = FxBz - np.roll(FxBz, 1, axis=0) + FyBz - np.roll(FyBz, 1, axis=1)
+        Pxs = B[0]**2 + B[1]**2 + B[2]**2
+        return self._rms * B / Pxs.mean()**0.5
 
     @logmethod
     def power_spectrum(self, bins=128, zeta=None):
@@ -62,6 +96,21 @@ class GaussianRandomVectorField3d(object):
             Ak = self._Ak
         return power_spectrum(None, Ak=Ak, Ks=self._Ks, bins=bins)
 
+
+
+def divergence(f):
+    """
+    Compute the divergence of the vector field f according to the
+    corner-centered stencil of Toth (2000)
+    """
+    roll = np.roll
+    def R(A, i, j, k, axis):
+        i,j,k = [(i,j,k), (k,i,j), (j,k,i)][axis]
+        return roll(roll(roll(A, i, axis=0), j, axis=1), k, axis=2)
+    div = [((R(f[i],1,0,0,i) + R(f[i],1,1,0,i) + R(f[i],1,0,1,i) + R(f[i],1,1,1,i)) -
+            (R(f[i],0,0,0,i) + R(f[i],0,1,0,i) + R(f[i],0,0,1,i) + R(f[i],0,1,1,i)))
+           for i in range(3)]
+    return (div[0] + div[1] + div[2]) / 4.0
 
 
 def helmholtz(Ak, Ks):
@@ -110,8 +159,12 @@ if __name__ == "__main__":
     """
     import matplotlib.pyplot as plt
     p = -5./3.
-    field = GaussianRandomVectorField3d(128, rms=4.0, Pofk=lambda k: k**p)
-    A = field.get_field(zeta=1.0)
+    field = GaussianRandomVectorField3d(64, rms=4.0, Pofk=lambda k: k**p)
+    #A = field.get_field(zeta=1.0)
+    A = field.get_toth_potential_field()
+    D = divergence(A)
+    print "Toth div's are:", D.std(), D.min(), D.max()
+    print "field RMS is:", (A[0]*A[0] + A[1]*A[1] + A[2]*A[2]).mean()**0.5
     #k, PD, PS = field.power_spectrum(zeta=1.0)
     k, PD, PS = power_spectrum(A)
     i = np.argmax(PS)
