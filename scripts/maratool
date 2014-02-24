@@ -121,6 +121,17 @@ def cmd_power_spectrum():
 
 
 
+def cmd_pspec_evolve():
+    cls = reductions.MaraReductionsReader
+    parser = argparse.ArgumentParser()
+    get_kwargs = cls.populate_parser('plot_time_devel', parser)
+    parser.add_argument("filename")
+    pargs = parser.parse_args()
+    reduc = cls(pargs.filename)
+    reduc.plot_time_devel(**get_kwargs(pargs))
+
+
+
 if __name__ == "__main__":
 
     cmds = [c for c in dir() if c.startswith('cmd_')]

@@ -9,7 +9,8 @@ class MaraTool(object):
 
         for arg, default in zip(args[1:], defaults):
             if type(default) is list:
-                parser.add_argument("--"+arg, action='append')
+                parser.add_argument("--"+arg, action='append',
+                                    type=type(default[0]))
             elif type(default) is bool:
                 parser.add_argument("--"+arg, action='store_true')
             else:
