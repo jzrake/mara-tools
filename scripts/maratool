@@ -32,6 +32,8 @@ def cmd_gaussian_bfield():
                         help="RMS value of magnetic field", default=1.0)
     parser.add_argument("-N", "--resolution", type=int,
                         help="domain resulution (N^3)", default=32)
+    parser.add_argument("--comment",
+                        help="string for in new checkpoint under 'comment'")
     args = parser.parse_args()
 
     def small_scale(k):
@@ -55,7 +57,8 @@ def cmd_gaussian_bfield():
         prim['Bz'][:] = B[2]
 
     chkpt.apply_initial_data(callback)
-
+    if args.comment:
+        chkpt.set_comment(args.comment)
 
 
 def cmd_show_log():
@@ -64,7 +67,7 @@ def cmd_show_log():
     args = parser.parse_args()
 
     chkpt = chkptlog.MaraCheckpointLoggedData(args.filename)
-    chkpt.plot_fields(['mag', 'kin'])
+    chkpt.plot_fields(['mag', 'kin', 'tie'])
 
 
 

@@ -29,11 +29,12 @@ class MaraCheckpointLoggedData(object):
         self.runargs = runargs
         h5f.close()
 
-    def plot_fields(self, fields, plot=None):
-        plot = plot if plot else plt.plot
+    def plot_fields(self, fields):
         for field in fields:
             y = getattr(self, field)
-            plot(self.time, y, label=field)
+            plt.loglog(self.time, y, label=field)
+        plt.loglog(self.time[1:], 1e-3*self.time[1:]**(-4./3.), ls='--', c='k', label=r'$t^{-4/3}$')
+        plt.loglog(self.time[1:], 1e-2*self.time[1:]**(-3./3.), ls='-.', c='k', label=r'$t^{-1}$')
         plt.xlabel(r"$t$")
         plt.ylabel(r"energy")
         plt.legend(loc='best')
