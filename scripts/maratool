@@ -29,9 +29,17 @@ def cmd_gaussian_bfield():
     def small_scale(k):
         k0 = 0.01
         return pow(k,12) * np.exp(-k/k0);
+    def small_scale_narrow(k):
+        """
+        Sam: can mess with this function
+        """
+        k0 = 0.01
+        return pow(k,12) * np.exp(-(k/k0)**2);
     def flat(k):
         return 1.0
+
     spectral_shapes = {'small_scale': small_scale,
+                       'small_scale_narrow': small_scale_narrow,
                        'flat': flat}
 
     parser = argparse.ArgumentParser()
@@ -43,12 +51,24 @@ def cmd_gaussian_bfield():
                         help="domain resulution (N^3)", default=32)
     parser.add_argument("--spectrum", type=str, default='small_scale',
                         choices=spectral_shapes.keys())
+    parser.add_argument("--show-spectrum", action='store_true',
+                        help="just show the power spectrum and exit")
     parser.add_argument("--toth", action='store_true',
                         help="Toth-divergenceless field (instead of spectral)")
     args = parser.parse_args()
 
     N = args.resolution
     PofK = spectral_shapes[args.spectrum]
+
+    if args.show_spectrum:
+        import matplotlib.pyplot as plt
+        k = np.logspace(-3.0, 0.0, 1000)
+        plt.loglog(k, [PofK(ki) for ki in k])
+        plt.xlabel(r'$k$')
+        plt.ylabel(r'$dP/dk$')
+        plt.show()
+        return
+
     chkpt = genchkpt.MaraCheckpointCreator(args.outfile, [N,N,N], mhd=True)
     field = gaussfield.GaussianRandomVectorField3d(N, rms=args.rms,
                                                    Pofk=PofK)
