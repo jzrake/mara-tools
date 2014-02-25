@@ -1,6 +1,5 @@
 import numpy as np
 import h5py
-import matplotlib.pyplot as plt
 from toolbase import MaraTool
 from autolog import logmethod
 
@@ -24,6 +23,7 @@ class MaraReductionsReader(MaraTool):
                            title='',
                            hardcopy='',
                            skip=1):
+        import matplotlib.pyplot as plt
         if not which: which = ['magnetic-solenoidal']
         for n, dset in enumerate(self._h5file):
             if not dset.startswith('pspec'): continue
@@ -55,6 +55,7 @@ class MaraReductionsReader(MaraTool):
                         nolegend=False,
                         title='',
                         hardcopy=''):
+        import matplotlib.pyplot as plt
         if not which: which = ['magnetic-solenoidal']
         if not kbins: kbins = [32]
 
