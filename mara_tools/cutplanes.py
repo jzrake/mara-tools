@@ -1,6 +1,5 @@
 import numpy as np
 import h5py
-import matplotlib.pyplot as plt
 from toolbase import MaraTool
 from autolog import logmethod
 
@@ -11,6 +10,7 @@ class MaraCheckpointCutplaneExtractor(MaraTool):
 
     @logmethod
     def plot_slice(self, field='rho', cmap='jet', axis=0, index=0):
+        import matplotlib.pyplot as plt
         if axis == 0: imgdata = self._chkpt['prim'][field][index,:,:]
         if axis == 1: imgdata = self._chkpt['prim'][field][:,index,:]
         if axis == 2: imgdata = self._chkpt['prim'][field][:,:,index]

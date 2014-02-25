@@ -1,7 +1,6 @@
 import itertools
 import numpy as np
 import h5py
-import matplotlib.pyplot as plt
 from autolog import logmethod
 
 
@@ -135,6 +134,7 @@ class StokesVectorsImage(object):
 
     @logmethod
     def make_figures1(self):
+        import matplotlib.pyplot as plt
         si, sq, su, fp = self.I, self.Q, self.U, self.P
         plt.figure(figsize=(15,3))
         plt.subplot(1,5,1)
@@ -151,6 +151,7 @@ class StokesVectorsImage(object):
 
     @logmethod
     def make_figures2(self):
+        import matplotlib.pyplot as plt
         si, sq, su, fp = self.I, self.Q, self.U, self.P
         plt.figure(figsize=(10,12))
         plt.imshow(si, origin='lower')

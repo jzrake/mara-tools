@@ -1,4 +1,3 @@
-from matplotlib import pyplot as plt
 from autolog import logmethod
 
 class MaraCheckpointLoggedData(object):
@@ -30,6 +29,7 @@ class MaraCheckpointLoggedData(object):
         h5f.close()
 
     def plot_fields(self, fields):
+        from matplotlib import pyplot as plt
         for field in fields:
             y = getattr(self, field)
             plt.loglog(self.time, y, label=field)
