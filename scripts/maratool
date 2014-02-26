@@ -27,14 +27,12 @@ from mara_tools import reductions
 def cmd_gaussian_bfield():
 
     def small_scale(k):
-        k0 = 0.01
-        return pow(k,12) * np.exp(-k/k0);
+        return pow(k,12) * np.exp(-k/k0)
     def small_scale_narrow(k):
-        """
-        Sam: can mess with this function
-        """
-        k0 = 0.01
-        return pow(k,12) * np.exp(-(k/k0)**2);
+        x0 = np.log(k0)
+        x = np.log(k)
+        y = -((x - x0) / 0.05)**2
+        return np.exp(y)
     def flat(k):
         return 1.0
 
@@ -47,17 +45,22 @@ def cmd_gaussian_bfield():
                         help="output HDF5 file name", default="chkpt.0000.h5")
     parser.add_argument("--rms", type=float,
                         help="RMS value of magnetic field", default=1.0)
+    parser.add_argument("--kpeak", type=float,
+                        help="wavenumber of max power", default=0.01)
     parser.add_argument("-N", "--resolution", type=int,
                         help="domain resulution (N^3)", default=32)
     parser.add_argument("--spectrum", type=str, default='small_scale',
                         choices=spectral_shapes.keys())
     parser.add_argument("--show-spectrum", action='store_true',
-                        help="just show the power spectrum and exit")
+                        help="just show the functional power spectrum and exit")
+    parser.add_argument("--show-spectrum-after", action='store_true',
+                        help="show the power spectrum of generated field")
     parser.add_argument("--toth", action='store_true',
                         help="Toth-divergenceless field (instead of spectral)")
     args = parser.parse_args()
 
     N = args.resolution
+    k0 = args.kpeak
     PofK = spectral_shapes[args.spectrum]
 
     if args.show_spectrum:
@@ -76,6 +79,12 @@ def cmd_gaussian_bfield():
         B = field.get_toth_potential_field()
     else:
         B = field.get_field(zeta=1.0)
+
+    if args.show_spectrum_after:
+        import matplotlib.pyplot as plt
+        k, PD, PS = gaussfield.power_spectrum(B)
+        plt.loglog(k, PS)
+        plt.show()
 
     def callback(prim):
         prim['pre'][:] = 1.0
