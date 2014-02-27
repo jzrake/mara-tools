@@ -43,7 +43,8 @@ class GaussianRandomVectorField3d(object):
         return helmholtz(self._Ak, self._Ks)
 
     @logmethod
-    def get_field(self, zeta=None, kcomp=None, force_free=None):
+    def get_field(self, zeta=None, kcomp=None, force_free=None,
+                  perturbation=0.0):
         """
         zeta:
         -----
@@ -55,7 +56,7 @@ class GaussianRandomVectorField3d(object):
         kcomp:
         ------
 
-        If float, multiply power spectrum by power law with index kcomp
+        If float, multiply power spectrum by power law with index kcomp.
 
 
         force_free:
@@ -66,6 +67,13 @@ class GaussianRandomVectorField3d(object):
         magnetic pressure gradient. This is equivalent to the power spectrum
         having compact support at |k| = alpha, where alpha has the value of the
         force_free parameter.
+
+
+        perturbation:
+        -----------
+
+        If in force-free mode and perturbation is not zero, then instead of
+        zero-ing out the off-shell modes, just suppress them by this factor.
         """
         if zeta is not None:
             Dk, Sk = self.helmholtz()
@@ -80,7 +88,7 @@ class GaussianRandomVectorField3d(object):
         # zero out all the Fourier amplitudes not on the force-free wavenumber
         if force_free is not None:
             a2 = self._K2.flat[np.argmin(abs(self._K2 - force_free**2))]
-            Ak[:,self._K2 != a2] = 0.0
+            Ak[:,self._K2 != a2] *= perturbation
 
         Ax = np.fft.ifftn(Ak, axes=[1,2,3]).real
         Pxs = Ax[0]**2 + Ax[1]**2 + Ax[2]**2

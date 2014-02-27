@@ -60,6 +60,9 @@ def cmd_gaussian_bfield():
                         help="Toth-divergenceless field (instead of spectral)")
     parser.add_argument("--force-free", type=float, default=None,
                         help="wavenumber at which to enforce force-free field")
+    parser.add_argument("--perturbation", type=float, default=None,
+                        help="surpession factor for off-shell modes, if in "
+                        "force-free mode")
     args = parser.parse_args()
 
     N = args.resolution
@@ -83,7 +86,8 @@ def cmd_gaussian_bfield():
     if args.toth:
         B = field.get_toth_potential_field(force_free=kff)
     else:
-        B = field.get_field(zeta=1.0, force_free=kff)
+        B = field.get_field(zeta=1.0, force_free=kff,
+                            perturbation=args.perturbation)
 
     if args.show_spectrum_after:
         import matplotlib.pyplot as plt
@@ -184,11 +188,15 @@ def cmd_magnetic_forces():
     plt.figure()
     plt.imshow(-P[0,:,:,0])
     plt.colorbar()
-    plt.title('pressure')
+    plt.title(r'$\frac{1}{8\pi}\nabla B^2$')
     plt.figure()
     plt.imshow(T[0,:,:,0])
     plt.colorbar()
-    plt.title('tension')
+    plt.title(r'$\frac{1}{4\pi}B \cdot \nabla B$')
+    plt.figure()
+    plt.imshow(T[0,:,:,0] + P[0,:,:,0])
+    plt.colorbar()
+    plt.title(r'$-\frac{1}{8\pi}\nabla B^2 + \frac{1}{4\pi}B \cdot \nabla B$')
     plt.show()
 
 
