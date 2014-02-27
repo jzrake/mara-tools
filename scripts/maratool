@@ -61,8 +61,10 @@ def cmd_gaussian_bfield():
     parser.add_argument("--force-free", type=float, default=None,
                         help="wavenumber at which to enforce force-free field")
     parser.add_argument("--perturbation", type=float, default=None,
-                        help="surpession factor for off-shell modes, if in "
+                        help="surpression factor for off-shell modes, if in "
                         "force-free mode")
+    parser.add_argument("--mean-field", type=float, default=0.0,
+                        help="value of the mean field along the x-direction")
     args = parser.parse_args()
 
     N = args.resolution
@@ -84,10 +86,12 @@ def cmd_gaussian_bfield():
                                                    rms=args.rms,
                                                    Pofk=PofK)
     if args.toth:
-        B = field.get_toth_potential_field(force_free=kff)
+        B = field.get_toth_potential_field(force_free=kff,
+                                           mean_field=[args.mean_field, 0.0, 0.0])
     else:
         B = field.get_field(zeta=1.0, force_free=kff,
-                            perturbation=args.perturbation)
+                            perturbation=args.perturbation,
+                            mean_field=[args.mean_field, 0.0, 0.0])
 
     if args.show_spectrum_after:
         import matplotlib.pyplot as plt

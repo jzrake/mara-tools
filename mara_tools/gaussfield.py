@@ -44,7 +44,7 @@ class GaussianRandomVectorField3d(object):
 
     @logmethod
     def get_field(self, zeta=None, kcomp=None, force_free=None,
-                  perturbation=0.0):
+                  perturbation=0.0, mean_field=[0, 0, 0]):
         """
         zeta:
         -----
@@ -70,7 +70,7 @@ class GaussianRandomVectorField3d(object):
 
 
         perturbation:
-        -----------
+        -------------
 
         If in force-free mode and perturbation is not zero, then instead of
         zero-ing out the off-shell modes, just suppress them by this factor.
@@ -92,10 +92,11 @@ class GaussianRandomVectorField3d(object):
 
         Ax = np.fft.ifftn(Ak, axes=[1,2,3]).real
         Pxs = Ax[0]**2 + Ax[1]**2 + Ax[2]**2
-        return self._rms * Ax / Pxs.mean()**0.5
+        A0 = np.array(mean_field)[:,None,None,None]
+        return A0 + self._rms * Ax / Pxs.mean()**0.5
 
     @logmethod
-    def get_toth_potential_field(self, force_free=None):
+    def get_toth_potential_field(self, force_free=None, mean_field=[0, 0, 0]):
         """
         Return a Gaussian random field which is divergenceless according to the
         corner-centered stencil of Toth (2000), by treating the Fourier
@@ -129,7 +130,8 @@ class GaussianRandomVectorField3d(object):
         B[1] = FzBy - np.roll(FzBy, 1, axis=2) + FxBy - np.roll(FxBy, 1, axis=0)
         B[2] = FxBz - np.roll(FxBz, 1, axis=0) + FyBz - np.roll(FyBz, 1, axis=1)
         Pxs = B[0]**2 + B[1]**2 + B[2]**2
-        return self._rms * B / Pxs.mean()**0.5
+        B0 = np.array(mean_field)[:,None,None,None]
+        return B0 + self._rms * B / Pxs.mean()**0.5
 
     @logmethod
     def power_spectrum(self, bins=128, zeta=None):
