@@ -158,6 +158,17 @@ def cmd_cutplanes():
 
 
 
+def cmd_vector_field():
+    cls = cutplanes.MaraCheckpointCutplaneExtractor
+    parser = argparse.ArgumentParser()
+    get_kwargs = cls.populate_parser('plot_lic', parser)
+    parser.add_argument("filename")
+    pargs = parser.parse_args()
+    chkpt = cls(pargs.filename)
+    chkpt.plot_lic(**get_kwargs(pargs))
+
+
+
 def cmd_power_spectrum():
     cls = reductions.MaraReductionsReader
     parser = argparse.ArgumentParser()
