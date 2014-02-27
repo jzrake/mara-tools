@@ -13,13 +13,13 @@ class GaussianRandomVectorField3d(object):
         Ax = np.random.uniform(-0.5, 0.5, [3] + [size]*3)
         Ks = np.zeros(Ax.shape, dtype=float)
         Ak = np.fft.fftn(Ax, axes=[1,2,3])
-        Ak[:,size/2,:,:] = 0.0
+        Ak[:,size/2,:,:] = 0.0 # zero-out the Nyquist frequencies
         Ak[:,:,size/2,:] = 0.0
         Ak[:,:,:,size/2] = 0.0
         Ks[0] = np.fft.fftfreq(size)[:,None,None]
         Ks[1] = np.fft.fftfreq(size)[None,:,None]
         Ks[2] = np.fft.fftfreq(size)[None,None,:]
-        K2 = np.abs(Ks[0])**2 + np.abs(Ks[1])**2 + np.abs(Ks[2])**2
+        K2 = Ks[0]**2 + Ks[1]**2 + Ks[2]**2
         K2[0,0,0] = 1.0 # prevent divide-by-zero
         if Pofk is None: Pofk = lambda k: 1.0
         Pk = Pofk(K2**0.5)
@@ -43,25 +43,61 @@ class GaussianRandomVectorField3d(object):
         return helmholtz(self._Ak, self._Ks)
 
     @logmethod
-    def get_field(self, zeta=None, kcomp=None):
+    def get_field(self, zeta=None, kcomp=None, force_free=None):
+        """
+        zeta:
+        -----
+
+        Helmoltz decomposition parameter, get a field which is zeta part
+        solenoidal and 1 - zeta part dilatational.
+
+
+        kcomp:
+        ------
+
+        If float, multiply power spectrum by power law with index kcomp
+
+
+        force_free:
+        -----------
+
+        If float, generate a field satisfying the linear force-free condition
+        del^2 B + alpha^2 B = 0, such that magnetic tension is balanced by the
+        magnetic pressure gradient. This is equivalent to the power spectrum
+        having compact support at |k| = alpha, where alpha has the value of the
+        force_free parameter.
+        """
         if zeta is not None:
             Dk, Sk = self.helmholtz()
             Ak = zeta * Sk + (1.0 - zeta) * Dk
         else:
             Ak = self._Ak
+
+        # compensate by k^kcomp if asked
         if kcomp is not None:
             Ak *= self._K2**(kcomp/2.0)
+
+        # zero out all the Fourier amplitudes not on the force-free wavenumber
+        if force_free is not None:
+            a2 = self._K2.flat[np.argmin(abs(self._K2 - force_free**2))]
+            Ak[:,self._K2 != a2] = 0.0
+
         Ax = np.fft.ifftn(Ak, axes=[1,2,3]).real
         Pxs = Ax[0]**2 + Ax[1]**2 + Ax[2]**2
         return self._rms * Ax / Pxs.mean()**0.5
 
     @logmethod
-    def get_toth_potential_field(self):
+    def get_toth_potential_field(self, force_free=None):
         """
         Return a Gaussian random field which is divergenceless according to the
-        corner-centered stencil of Toth (2000)
+        corner-centered stencil of Toth (2000), by treating the Fourier
+        amplitudes as a vector potential
         """
-        A = self.get_field(kcomp=-1.0)
+        if force_free is not None:
+            raise NotImplementedError("cannot generate force-free fields "
+                                      "that are Toth divergenceless")
+
+        Ak = self.get_field(kcomp=-1.0)
 
         def ct(a, sx, sy):
             F = -0.5*(a + sx(a,-1))
@@ -70,17 +106,17 @@ class GaussianRandomVectorField3d(object):
             fybx = 2*G+sx(G,-1)+sx(G,+1)-F-sy(F,-1)-sx(F,+1)-sy(sx(F,+1),-1)
             return fxby, fybx
 
-        FxBy, FyBx = ct(A[2],
+        FxBy, FyBx = ct(Ak[2],
                         lambda f,i: np.roll(f, i, axis=0),
                         lambda f,i: np.roll(f, i, axis=1))
-        FyBz, FzBy = ct(A[0],
+        FyBz, FzBy = ct(Ak[0],
                         lambda f,i: np.roll(f, i, axis=1),
                         lambda f,i: np.roll(f, i, axis=2))
-        FzBx, FxBz = ct(A[1],
+        FzBx, FxBz = ct(Ak[1],
                         lambda f,i: np.roll(f, i, axis=2),
                         lambda f,i: np.roll(f, i, axis=0))
 
-        B = np.zeros_like(A)
+        B = np.zeros(Ak.shape)
         B[0] = FyBx - np.roll(FyBx, 1, axis=1) + FzBx - np.roll(FzBx, 1, axis=2)
         B[1] = FzBy - np.roll(FzBy, 1, axis=2) + FxBy - np.roll(FxBy, 1, axis=0)
         B[2] = FxBz - np.roll(FxBz, 1, axis=0) + FyBz - np.roll(FyBz, 1, axis=1)

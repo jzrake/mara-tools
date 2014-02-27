@@ -22,6 +22,7 @@ from mara_tools import synchsky
 from mara_tools import genchkpt
 from mara_tools import cutplanes
 from mara_tools import reductions
+from mara_tools import mhd_forces
 
 
 def cmd_gaussian_bfield():
@@ -57,10 +58,13 @@ def cmd_gaussian_bfield():
                         help="show the power spectrum of generated field")
     parser.add_argument("--toth", action='store_true',
                         help="Toth-divergenceless field (instead of spectral)")
+    parser.add_argument("--force-free", type=float, default=None,
+                        help="wavenumber at which to enforce force-free field")
     args = parser.parse_args()
 
     N = args.resolution
     k0 = args.kpeak
+    kff = args.force_free
     PofK = spectral_shapes[args.spectrum]
 
     if args.show_spectrum:
@@ -73,12 +77,13 @@ def cmd_gaussian_bfield():
         return
 
     chkpt = genchkpt.MaraCheckpointCreator(args.outfile, [N,N,N], mhd=True)
-    field = gaussfield.GaussianRandomVectorField3d(N, rms=args.rms,
+    field = gaussfield.GaussianRandomVectorField3d(N,
+                                                   rms=args.rms,
                                                    Pofk=PofK)
     if args.toth:
-        B = field.get_toth_potential_field()
+        B = field.get_toth_potential_field(force_free=kff)
     else:
-        B = field.get_field(zeta=1.0)
+        B = field.get_field(zeta=1.0, force_free=kff)
 
     if args.show_spectrum_after:
         import matplotlib.pyplot as plt
@@ -98,6 +103,7 @@ def cmd_gaussian_bfield():
 
     chkpt.apply_initial_data(callback)
     chkpt.set_comment(str(vars(args)))
+
 
 
 def cmd_show_log():
@@ -166,6 +172,27 @@ def cmd_pspec_evolve():
 
 
 
+def cmd_magnetic_forces():
+    import matplotlib.pyplot as plt
+    cls = mhd_forces.MaraCheckpointForceCalculator
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+    pargs = parser.parse_args()
+    chkpt = cls(pargs.filename)
+    P = chkpt.magnetic_pressure_gradient()
+    T = chkpt.magnetic_tension()
+    plt.figure()
+    plt.imshow(-P[0,:,:,0])
+    plt.colorbar()
+    plt.title('pressure')
+    plt.figure()
+    plt.imshow(T[0,:,:,0])
+    plt.colorbar()
+    plt.title('tension')
+    plt.show()
+
+
+
 if __name__ == "__main__":
 
     cmds = [c for c in dir() if c.startswith('cmd_')]
@@ -177,4 +204,3 @@ if __name__ == "__main__":
     else:
         print "commands are:"
         print "\t" + "\n\t".join([c[4:] for c in cmds])
-

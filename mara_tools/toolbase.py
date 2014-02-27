@@ -7,6 +7,8 @@ class MaraTool(object):
         g = getattr(f, '_wrapped_method', f)
         args, varargs, varkw, defaults = inspect.getargspec(g)
 
+        if defaults is None: defaults = [ ]
+
         for arg, default in zip(args[1:], defaults):
             if type(default) is list:
                 parser.add_argument("--"+arg, action='append',
