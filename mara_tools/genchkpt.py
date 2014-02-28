@@ -7,6 +7,7 @@ class MaraCheckpointCreator(object):
     """
     @logmethod
     def __init__(self, filename, shape, mhd=True):
+        import datetime
         chkpt = h5py.File(filename, 'w')
         status = chkpt.require_group("status")
         prim = chkpt.require_group("prim")
@@ -25,6 +26,8 @@ class MaraCheckpointCreator(object):
         for dsetname in dsetnames:
             prim.require_dataset(dsetname, shape, dtype=float)
 
+        chkpt['time_created'] = str(datetime.datetime.now())
+
         self._chkpt = chkpt
 
     @logmethod
@@ -34,3 +37,8 @@ class MaraCheckpointCreator(object):
     @logmethod
     def set_comment(self, comment):
         self._chkpt["comment"] = comment
+
+    @logmethod
+    def set_numpy_random_state(self, random_state):
+        import pickle
+        self._chkpt["numpy_random_state"] = pickle.dumps(random_state)

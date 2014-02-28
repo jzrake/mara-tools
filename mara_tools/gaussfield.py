@@ -9,7 +9,11 @@ class GaussianRandomVectorField3d(object):
     classes.
     """
     @logmethod
-    def __init__(self, size, rms=1.0, Pofk=None):
+    def __init__(self, size, rms=1.0, Pofk=None, random_state=None):
+        if random_state is None:
+            random_state = np.random.get_state()
+        else:
+            np.random.set_state(random_state)
         Ax = np.random.uniform(-0.5, 0.5, [3] + [size]*3)
         Ks = np.zeros(Ax.shape, dtype=float)
         Ak = np.fft.fftn(Ax, axes=[1,2,3])
@@ -28,6 +32,7 @@ class GaussianRandomVectorField3d(object):
         self._Ks = Ks
         self._K2 = K2
         self._rms = rms
+        self._random_state = random_state
 
     @logmethod
     def root_mean_square(self):
@@ -139,9 +144,12 @@ class GaussianRandomVectorField3d(object):
             Dk, Sk = self.helmholtz()
             Ak = zeta * Sk + (1.0 - zeta) * Dk
         else:
-            Ak = self._Ak
+            Ak = self._Akg
         return power_spectrum(None, Ak=Ak, Ks=self._Ks, bins=bins)
 
+    @property
+    def random_state(self):
+        return self._random_state
 
 
 def divergence(f):

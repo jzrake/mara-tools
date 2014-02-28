@@ -10,7 +10,7 @@ class MaraCheckpointCutplaneExtractor(MaraTool):
 
     @logmethod
     def plot_slice(self, field='rho', cmap='jet', axis=0, index=0,
-                   sax=None, show=True):
+                   sax=None, noshow=True):
         import matplotlib.pyplot as plt
         if axis == 0: imgdata = self._chkpt['prim'][field][index,:,:]
         if axis == 1: imgdata = self._chkpt['prim'][field][:,index,:]
@@ -29,7 +29,7 @@ class MaraCheckpointCutplaneExtractor(MaraTool):
                      orientation="horizontal")
         plt.setp(sax.get_xticklabels(), visible=False)
         plt.setp(sax.get_yticklabels(), visible=False)
-        if show:
+        if not noshow:
             plt.show()
 
     @logmethod

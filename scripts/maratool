@@ -14,6 +14,7 @@ except ImportError:
 
 import sys
 import argparse
+import pickle
 import numpy as np
 import h5py
 from mara_tools import gaussfield
@@ -67,6 +68,10 @@ def cmd_gaussian_bfield():
                         help="value of the mean field along the x-direction")
     parser.add_argument("--hydro", action='store_true',
                         help="make random velocity field for hydro initial data")
+    parser.add_argument("--write-random-state", type=str, default=None,
+                        help="file in which to pickle the random state vector")
+    parser.add_argument("--read-random-state", type=str, default=None,
+                        help="file from which to read the random state vector")
 
     args = parser.parse_args()
 
@@ -84,11 +89,20 @@ def cmd_gaussian_bfield():
         plt.show()
         return
 
+    if args.read_random_state is None:
+        random_state = None
+    elif args.read_random_state.endswith('.h5'):
+        h5file = h5py.File(args.read_random_state, 'r')
+        random_state = pickle.loads(h5file['numpy_random_state'].value)
+    else:
+        random_state = pickle.load(open(args.read_random_state))
+
     chkpt = genchkpt.MaraCheckpointCreator(args.outfile, [N,N,N],
                                            mhd=not args.hydro)
     field = gaussfield.GaussianRandomVectorField3d(N,
                                                    rms=args.rms,
-                                                   Pofk=PofK)
+                                                   Pofk=PofK,
+                                                   random_state=random_state)
     if args.toth:
         B = field.get_toth_potential_field(force_free=kff,
                                            mean_field=[args.mean_field, 0.0, 0.0])
@@ -127,7 +141,10 @@ def cmd_gaussian_bfield():
 
     chkpt.apply_initial_data(callback)
     chkpt.set_comment(str(vars(args)))
+    chkpt.set_numpy_random_state(field.random_state)
 
+    if args.write_random_state is not None:
+        pickle.dump(field.random_state, open(args.write_random_state, 'w'))
 
 
 def cmd_show_log():
