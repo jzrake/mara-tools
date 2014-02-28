@@ -65,6 +65,9 @@ def cmd_gaussian_bfield():
                         "force-free mode")
     parser.add_argument("--mean-field", type=float, default=0.0,
                         help="value of the mean field along the x-direction")
+    parser.add_argument("--hydro", action='store_true',
+                        help="make random velocity field for hydro initial data")
+
     args = parser.parse_args()
 
     N = args.resolution
@@ -81,7 +84,8 @@ def cmd_gaussian_bfield():
         plt.show()
         return
 
-    chkpt = genchkpt.MaraCheckpointCreator(args.outfile, [N,N,N], mhd=True)
+    chkpt = genchkpt.MaraCheckpointCreator(args.outfile, [N,N,N],
+                                           mhd=not args.hydro)
     field = gaussfield.GaussianRandomVectorField3d(N,
                                                    rms=args.rms,
                                                    Pofk=PofK)
@@ -99,7 +103,7 @@ def cmd_gaussian_bfield():
         plt.loglog(k, PS)
         plt.show()
 
-    def callback(prim):
+    def callback_srmhd(prim):
         prim['pre'][:] = 1.0
         prim['rho'][:] = 1.0
         prim['vx'][:] = 0.0
@@ -108,6 +112,18 @@ def cmd_gaussian_bfield():
         prim['Bx'][:] = B[0]
         prim['By'][:] = B[1]
         prim['Bz'][:] = B[2]
+
+    def callback_nrhyd(prim):
+        prim['pre'][:] = 1.0
+        prim['rho'][:] = 1.0
+        prim['vx'][:] = B[0]
+        prim['vy'][:] = B[1]
+        prim['vz'][:] = B[2]
+
+    if args.hydro:
+        callback = callback_nrhyd
+    else:
+        callback = callback_srmhd       
 
     chkpt.apply_initial_data(callback)
     chkpt.set_comment(str(vars(args)))

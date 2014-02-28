@@ -9,22 +9,28 @@ class MaraCheckpointCutplaneExtractor(MaraTool):
         self._chkpt = h5py.File(filename, 'r')
 
     @logmethod
-    def plot_slice(self, field='rho', cmap='jet', axis=0, index=0):
+    def plot_slice(self, field='rho', cmap='jet', axis=0, index=0,
+                   sax=None, show=True):
         import matplotlib.pyplot as plt
         if axis == 0: imgdata = self._chkpt['prim'][field][index,:,:]
         if axis == 1: imgdata = self._chkpt['prim'][field][:,index,:]
         if axis == 2: imgdata = self._chkpt['prim'][field][:,:,index]
 
-        fig = plt.figure(figsize=[10,10])
-        sax = fig.add_subplot('111')
+        if sax is None:
+            fig = plt.figure(figsize=[10,10])
+            sax = fig.add_subplot('111')
+        else:
+            fig = sax.get_figure()
         cax = sax.imshow(imgdata, origin='image', interpolation='nearest')
-        plt.subplots_adjust(left=0, right=1, bottom=0, top=1)
-        plt.axis('off')
+        sax.axes.get_xaxis().set_visible(False)
+        sax.axes.get_yaxis().set_visible(False)
+        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
         fig.colorbar(cax, shrink=0.85, pad=0.0, aspect=20, cmap=cmap,
                      orientation="horizontal")
         plt.setp(sax.get_xticklabels(), visible=False)
         plt.setp(sax.get_yticklabels(), visible=False)
-        plt.show()
+        if show:
+            plt.show()
 
     @logmethod
     def plot_lic(self, index=0, texture=None):
