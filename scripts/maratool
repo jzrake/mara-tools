@@ -148,13 +148,15 @@ def cmd_gaussian_bfield():
         pickle.dump(field.random_state, open(args.write_random_state, 'w'))
 
 
+
 def cmd_show_log():
     parser = argparse.ArgumentParser()
     parser.add_argument("filename")
-    args = parser.parse_args()
+    parser.add_argument("--fields", type=str, default="kin,tie")
+    pargs = parser.parse_args()
 
-    chkpt = chkptlog.MaraCheckpointLoggedData(args.filename)
-    chkpt.plot_fields(['mag', 'kin', 'tie'])
+    chkpt = chkptlog.MaraCheckpointLoggedData(pargs.filename)
+    chkpt.plot_fields(pargs.fields.split(','))
 
 
 
