@@ -10,8 +10,17 @@ class MaraReductionsReader(MaraTool):
 
     def available_power_spectra(self):
         for dset in self._h5file:
-            if dset.startswith('pspec'):
-                print dset, self._h5file[dset].keys()
+            if not dset.startswith('pspec'): continue
+            print dset, self._h5file[dset].keys()
+
+    def spectrum_near_time(self, time, which):
+        time_dict = { }
+        for dset in self._h5file:
+            if not dset.startswith('pspec'): continue
+            time_dict[self._h5file[dset][which]['time'].value] = dset
+        times = np.array(time_dict.keys())
+        tsnap = times[np.argmin(abs(times - time))]
+        return time_dict[tsnap]
 
     @logmethod
     def plot_power_spectra(self, which=['magnetic-solenoidal',
@@ -44,6 +53,20 @@ class MaraReductionsReader(MaraTool):
             plt.savefig(hardcopy)
         else:
             plt.show()
+
+    @logmethod
+    def plot_single_power_spectrum(self, time, which, comp=0.0, **plot_args):
+        import matplotlib.pyplot as plt
+        dset = self.spectrum_near_time(time, which)
+        N = len(self._h5file[dset][which]['binloc'])
+        x = self._h5file[dset][which]['binloc'][:N/2]
+        y = self._h5file[dset][which]['binval'][:N/2]
+        t = self._h5file[dset][which]['time'].value
+        if 'label' not in plot_args:
+            plot_args['label'] = r'%s:%s $t=%f$'%(self._h5file.filename,
+                                                  which, t)
+        plt.loglog(x, y*x**comp, **plot_args)
+        return x, y
 
     @logmethod
     def plot_time_devel(self, which=['magnetic-solenoidal',

@@ -24,6 +24,7 @@ from mara_tools import genchkpt
 from mara_tools import cutplanes
 from mara_tools import reductions
 from mara_tools import mhd_forces
+from mara_tools import pub_figs
 
 
 def cmd_gaussian_bfield():
@@ -252,11 +253,19 @@ def cmd_magnetic_forces():
 if __name__ == "__main__":
 
     cmds = [c for c in dir() if c.startswith('cmd_')]
+    figs = [c for c in dir(pub_figs) if c.startswith('fig_')]
 
-    if len(sys.argv) > 1 and 'cmd_' + sys.argv[1] in cmds:
+    if   len(sys.argv) > 1 and 'cmd_' + sys.argv[1] in cmds:
         cmd = 'cmd_' + sys.argv[1]
         del sys.argv[1]
         exec(cmd + "()")
+    elif len(sys.argv) > 1 and 'fig_' + sys.argv[1] in figs:
+        fig = 'fig_' + sys.argv[1]
+        del sys.argv[1]
+        getattr(pub_figs, fig)()
     else:
         print "commands are:"
         print "\t" + "\n\t".join([c[4:] for c in cmds])
+
+        print "pre-made figures:"
+        print "\t" + "\n\t".join([c[4:] for c in figs])
