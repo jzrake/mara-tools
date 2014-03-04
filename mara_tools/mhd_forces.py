@@ -60,7 +60,7 @@ class MaraCheckpointForceCalculator(MaraTool):
         F = np.zeros_like(B)
         for i in range(3):
             for j in range(3):
-                F[i] += B[j] * gradB[i,j]
+                F[i] -= B[j] * gradB[i,j]
         return F
 
     @logmethod
