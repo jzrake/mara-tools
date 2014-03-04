@@ -87,12 +87,27 @@ class GaussianRandomVectorField3d(object):
         if kcomp is not None:
             Ak *= self._K2**(kcomp/2.0)
 
-        # zero out all the Fourier amplitudes not on the force-free wavenumber
         if force_free is not None:
-            raise NotImplementedError("force-free field creation is "
-                                      "currently broken")
+            """
+            Generic construction of force-free fields, see Chandrasekhar (1957)
+            ApJ 126...457C
+            """
             a2 = self._K2.flat[np.argmin(abs(self._K2 - force_free**2))]
-            Ak[:,self._K2 != a2] *= perturbation
+            Ak[:,self._K2 != a2] *= 0.0
+            if False:
+                """ use a different unit vector for each k """
+                ak = (np.abs(Ak[0])**2 + np.abs(Ak[1])**2 + np.abs(Ak[2])**2)**0.5
+                ak[ak == 0.0] = 1.0
+                nh = np.rollaxis(Ak / ak, 0, 4)
+                Xk = Ak[0]*nh[...,0] + Ak[1]*nh[...,1] + Ak[2]*nh[...,2]
+            else:
+                """ use the same unit vector for each k """
+                nh = [3**-0.5, 3**-0.5, 3**-0.5]
+                Xk = Ak[0]*nh[0] + Ak[1]*nh[1] + Ak[2]*nh[2]
+            ks = np.rollaxis(self._Ks, 0, 4)
+            Tk = 1.j * np.cross(ks, nh*Xk[...,None])
+            Sk = 1.j * np.cross(ks, Tk) / force_free
+            Ak = np.rollaxis(Tk + Sk, 3, 0)
 
         Ax = np.fft.ifftn(Ak, axes=[1,2,3]).real
         Pxs = Ax[0]**2 + Ax[1]**2 + Ax[2]**2
