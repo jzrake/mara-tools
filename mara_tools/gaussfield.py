@@ -15,14 +15,11 @@ class GaussianRandomVectorField3d(object):
         else:
             np.random.set_state(random_state)
         Ax = np.random.uniform(-0.5, 0.5, [3] + [size]*3)
-        Ks = np.zeros(Ax.shape, dtype=float)
+        Ks = get_ks(Ax.shape)
         Ak = np.fft.fftn(Ax, axes=[1,2,3])
         Ak[:,size/2,:,:] = 0.0 # zero-out the Nyquist frequencies
         Ak[:,:,size/2,:] = 0.0
         Ak[:,:,:,size/2] = 0.0
-        Ks[0] = np.fft.fftfreq(size)[:,None,None]
-        Ks[1] = np.fft.fftfreq(size)[None,:,None]
-        Ks[2] = np.fft.fftfreq(size)[None,None,:]
         K2 = Ks[0]**2 + Ks[1]**2 + Ks[2]**2
         K2[0,0,0] = 1.0 # prevent divide-by-zero
         if Pofk is None: Pofk = lambda k: 1.0
@@ -71,7 +68,7 @@ class GaussianRandomVectorField3d(object):
         del^2 B + alpha^2 B = 0, such that magnetic tension is balanced by the
         magnetic pressure gradient. This is equivalent to the power spectrum
         having compact support at |k| = alpha, where alpha has the value of the
-        force_free parameter.
+        force_free parameter. **CURRENTLY BROKEN**
 
 
         perturbation:
@@ -92,6 +89,8 @@ class GaussianRandomVectorField3d(object):
 
         # zero out all the Fourier amplitudes not on the force-free wavenumber
         if force_free is not None:
+            raise NotImplementedError("force-free field creation is "
+                                      "currently broken")
             a2 = self._K2.flat[np.argmin(abs(self._K2 - force_free**2))]
             Ak[:,self._K2 != a2] *= perturbation
 
@@ -152,6 +151,22 @@ class GaussianRandomVectorField3d(object):
         return self._random_state
 
 
+def get_ks(shape):
+    """
+    Get the wavenumber array, assuming all dimensions are length 1, while the
+    number of cells along each axis may be unique. NOTE: These wavenumbers give
+    derivatives that small by a factor of 2 pi / L where L is the domain
+    size. They are convenient in that k=1.0 means the domain size, k=10.0 is
+    1/10 the domain size and so on.
+    """
+    N0, N1, N2 = shape[1:]
+    Ks = np.zeros(shape)
+    Ks[0] = np.fft.fftfreq(N0)[:,None,None]*2*N0
+    Ks[1] = np.fft.fftfreq(N1)[None,:,None]*2*N1
+    Ks[2] = np.fft.fftfreq(N2)[None,None,:]*2*N2
+    return Ks
+
+
 def divergence(f):
     """
     Compute the divergence of the vector field f according to the
@@ -182,10 +197,7 @@ def helmholtz(Ak, Ks):
 def power_spectrum(Ax, Ak=None, Ks=None, bins=128):
     if Ks is None:
         s = Ax.shape if Ax is not None else Ak.shape
-        Ks = np.zeros(s, dtype=float)
-        Ks[0] = np.fft.fftfreq(s[1])[:,None,None]
-        Ks[1] = np.fft.fftfreq(s[2])[None,:,None]
-        Ks[2] = np.fft.fftfreq(s[3])[None,None,:]
+        Ks = get_ks(s)
     if Ak is None:
         Ak = np.fft.fftn(Ax, axes=[1,2,3])
 

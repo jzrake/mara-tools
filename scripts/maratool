@@ -29,19 +29,14 @@ from mara_tools import pub_figs
 
 def cmd_gaussian_bfield():
 
-    def small_scale(k):
-        return pow(k,12) * np.exp(-k/k0)
-    def small_scale_narrow(k):
-        x0 = np.log(k0)
-        x = np.log(k)
-        y = -((x - x0) / 0.05)**2
-        return np.exp(y)
-    def flat(k):
-        return 1.0
+    def log_quadratic(k):
+        x0 = np.log10(pargs.kpeak)
+        dx = pargs.width
+        x = np.log10(k)
+        y = -((x - x0) / dx)**2
+        return 10**y
 
-    spectral_shapes = {'small_scale': small_scale,
-                       'small_scale_narrow': small_scale_narrow,
-                       'flat': flat}
+    spectral_shapes = {'log_quadratic': log_quadratic}
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--outfile",
@@ -49,10 +44,15 @@ def cmd_gaussian_bfield():
     parser.add_argument("--rms", type=float,
                         help="RMS value of magnetic field", default=1.0)
     parser.add_argument("--kpeak", type=float,
-                        help="wavenumber of max power", default=0.01)
+                        help="peak wavenumber (10 means 1/10 of the domain)",
+                        default=10.0)
+    parser.add_argument("--width", type=float,
+                        help="width of power spectrum (in decades)",
+                        default=1.0)
     parser.add_argument("-N", "--resolution", type=int,
                         help="domain resulution (N^3)", default=32)
-    parser.add_argument("--spectrum", type=str, default='small_scale',
+    parser.add_argument("--spectrum", type=str,
+                        default=spectral_shapes.keys()[0],
                         choices=spectral_shapes.keys())
     parser.add_argument("--show-spectrum", action='store_true',
                         help="just show the functional power spectrum and exit")
@@ -60,11 +60,6 @@ def cmd_gaussian_bfield():
                         help="show the power spectrum of generated field")
     parser.add_argument("--toth", action='store_true',
                         help="Toth-divergenceless field (instead of spectral)")
-    parser.add_argument("--force-free", type=float, default=None,
-                        help="wavenumber at which to enforce force-free field")
-    parser.add_argument("--perturbation", type=float, default=0.0,
-                        help="surpression factor for off-shell modes, if in "
-                        "force-free mode")
     parser.add_argument("--mean-field", type=float, default=0.0,
                         help="value of the mean field along the x-direction")
     parser.add_argument("--hydro", action='store_true',
@@ -74,45 +69,45 @@ def cmd_gaussian_bfield():
     parser.add_argument("--read-random-state", type=str, default=None,
                         help="file from which to read the random state vector")
 
-    args = parser.parse_args()
+    pargs = parser.parse_args()
 
-    N = args.resolution
-    k0 = args.kpeak
-    kff = args.force_free
-    PofK = spectral_shapes[args.spectrum]
+    N = pargs.resolution
+    kff = None #pargs.force_free
+    PofK = spectral_shapes[pargs.spectrum]
 
-    if args.show_spectrum:
+    if pargs.show_spectrum:
         import matplotlib.pyplot as plt
-        k = np.logspace(-3.0, 0.0, 1000)
+        k = np.logspace(0.0, 3.0, 1000)
         plt.loglog(k, [PofK(ki) for ki in k])
         plt.xlabel(r'$k$')
         plt.ylabel(r'$dP/dk$')
+        plt.ylim(1e-6, 1.0)
         plt.show()
         return
 
-    if args.read_random_state is None:
+    if pargs.read_random_state is None:
         random_state = None
-    elif args.read_random_state.endswith('.h5'):
-        h5file = h5py.File(args.read_random_state, 'r')
+    elif pargs.read_random_state.endswith('.h5'):
+        h5file = h5py.File(pargs.read_random_state, 'r')
         random_state = pickle.loads(h5file['numpy_random_state'].value)
     else:
-        random_state = pickle.load(open(args.read_random_state))
+        random_state = pickle.load(open(pargs.read_random_state))
 
-    chkpt = genchkpt.MaraCheckpointCreator(args.outfile, [N,N,N],
-                                           mhd=not args.hydro)
+    chkpt = genchkpt.MaraCheckpointCreator(pargs.outfile, [N,N,N],
+                                           mhd=not pargs.hydro)
     field = gaussfield.GaussianRandomVectorField3d(N,
-                                                   rms=args.rms,
+                                                   rms=pargs.rms,
                                                    Pofk=PofK,
                                                    random_state=random_state)
-    if args.toth:
+    if pargs.toth:
         B = field.get_toth_potential_field(force_free=kff,
-                                           mean_field=[args.mean_field, 0.0, 0.0])
+                                           mean_field=[pargs.mean_field,
+                                                       0.0, 0.0])
     else:
         B = field.get_field(zeta=1.0, force_free=kff,
-                            perturbation=args.perturbation,
-                            mean_field=[args.mean_field, 0.0, 0.0])
+                            mean_field=[pargs.mean_field, 0.0, 0.0])
 
-    if args.show_spectrum_after:
+    if pargs.show_spectrum_after:
         import matplotlib.pyplot as plt
         k, PD, PS = gaussfield.power_spectrum(B)
         plt.loglog(k, PS)
@@ -135,17 +130,17 @@ def cmd_gaussian_bfield():
         prim['vy'][:] = B[1]
         prim['vz'][:] = B[2]
 
-    if args.hydro:
+    if pargs.hydro:
         callback = callback_nrhyd
     else:
         callback = callback_srmhd       
 
     chkpt.apply_initial_data(callback)
-    chkpt.set_comment(str(vars(args)))
+    chkpt.set_comment(str(vars(pargs)))
     chkpt.set_numpy_random_state(field.random_state)
 
-    if args.write_random_state is not None:
-        pickle.dump(field.random_state, open(args.write_random_state, 'w'))
+    if pargs.write_random_state is not None:
+        pickle.dump(field.random_state, open(pargs.write_random_state, 'w'))
 
 
 
