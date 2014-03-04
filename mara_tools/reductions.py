@@ -13,6 +13,7 @@ class MaraReductionsReader(MaraTool):
             if not dset.startswith('pspec'): continue
             print dset, self._h5file[dset].keys()
 
+    @logmethod
     def spectrum_near_time(self, time, which):
         time_dict = { }
         for dset in self._h5file:
@@ -20,6 +21,7 @@ class MaraReductionsReader(MaraTool):
             time_dict[self._h5file[dset][which]['time'].value] = dset
         times = np.array(time_dict.keys())
         tsnap = times[np.argmin(abs(times - time))]
+        print "snapped from t=%3.2f to t=%3.2f" % (time, tsnap)
         return time_dict[tsnap]
 
     @logmethod

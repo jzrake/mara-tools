@@ -24,8 +24,8 @@ def fig_power_spectrum_mach_boost():
     pargs = parser.parse_args()
 
     runs = [(os.path.join(pargs.data_dir, "hdec.%c-256.spec.h5"%c),
-             {'A': 1.0, 'B': 2.0, 'C': 4.0, 'D': 8.0}[c])
-            for c in "ABCD"]
+             {'E': 1.0, 'F': 2.0, 'G': 4.0, 'H': 8.0}[c])
+            for c in "EFGH"]
 
     plt.figure(figsize=[12,10])
     for filename, mach in runs:
@@ -37,7 +37,7 @@ def fig_power_spectrum_mach_boost():
     plt.xlabel(r'$k$')
     plt.ylabel(r'$k^{5/3} dP/dk$')
     plt.legend(loc='best')
-    plt.title('Comparison of decaying trans-sonic turbulence '
+    plt.title('Comparison of decaying sub-sonic turbulence '
               'with supersonic boosts (WENO-5)')
     plt.show()
 

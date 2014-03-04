@@ -62,7 +62,7 @@ def cmd_gaussian_bfield():
                         help="Toth-divergenceless field (instead of spectral)")
     parser.add_argument("--force-free", type=float, default=None,
                         help="wavenumber at which to enforce force-free field")
-    parser.add_argument("--perturbation", type=float, default=None,
+    parser.add_argument("--perturbation", type=float, default=0.0,
                         help="surpression factor for off-shell modes, if in "
                         "force-free mode")
     parser.add_argument("--mean-field", type=float, default=0.0,
@@ -232,10 +232,16 @@ def cmd_magnetic_forces():
     cls = mhd_forces.MaraCheckpointForceCalculator
     parser = argparse.ArgumentParser()
     parser.add_argument("filename")
+    parser.add_argument("--method", default="spectral",
+                        choices=["spectral", "finite-difference"])
     pargs = parser.parse_args()
     chkpt = cls(pargs.filename)
-    P = chkpt.magnetic_pressure_gradient()
-    T = chkpt.magnetic_tension()
+
+    B = chkpt.magnetic_field()
+    P = chkpt.magnetic_pressure_gradient_force(method=pargs.method)
+    T = chkpt.magnetic_tension(method=pargs.method)
+    print "total magnetic forces:", (P + T).std()
+
     plt.figure()
     plt.imshow(-P[0,:,:,0])
     plt.colorbar()
