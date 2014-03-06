@@ -28,16 +28,26 @@ class MaraCheckpointLoggedData(object):
         self.runargs = runargs
         h5f.close()
 
-    def plot_fields(self, fields):
+    def plot_fields(self, fields, plot_axis=None, noshow=False, **plot_args):
         from matplotlib import pyplot as plt
+
+        if plot_axis is None:
+            fig = plt.figure()
+            ax1 = fig.add_subplot('111')
+        else:
+            ax1 = plot_axis
+
         for field in fields:
             y = getattr(self, field)
-            plt.loglog(self.time, y, label=field)
-        plt.loglog(self.time[1:], 1e-3*self.time[1:]**(-4./3.),
-                   ls='--', c='k', label=r'$t^{-4/3}$')
-        plt.loglog(self.time[1:], 1e-2*self.time[1:]**(-3./3.),
-                   ls='-.', c='k', label=r'$t^{-1}$')
-        plt.xlabel(r"$t$")
-        plt.ylabel(r"energy")
-        plt.legend(loc='best')
-        plt.show()
+            plt.loglog(self.time, y, label=field, **plot_args)
+        #ax1.loglog(self.time[1:], 1e-3*self.time[1:]**(-4./3.),
+        #           ls='--', c='k', label=r'$t^{-4/3}$')
+        ax1.loglog(self.time[1:], 1e-2*self.time[1:]**(-3./3.),
+                   ls='--', c='k', label=r'$t^{-1}$')
+        ax1.set_xlabel(r"$t$")
+        ax1.set_ylabel(r"energy")
+
+        if plot_axis is None:
+            ax1.legend(loc='best')
+        if not noshow:
+            ax1.show()

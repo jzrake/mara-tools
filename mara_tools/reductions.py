@@ -3,6 +3,7 @@ import h5py
 from toolbase import MaraTool
 from autolog import logmethod
 
+
 class MaraReductionsReader(MaraTool):
     @logmethod
     def __init__(self, filename):
@@ -29,13 +30,23 @@ class MaraReductionsReader(MaraTool):
                                         'magnetic-dilatational',
                                         'velocity-solenoidal',
                                         'velocity-dilatational'],
-                           tmin=0.0, tmax=-1.0,
+                           tmin=0.0, tmax=1e10,
                            nolegend=False,
                            title='',
                            hardcopy='',
-                           skip=1):
+                           skip=1,
+                           cmap=''):
+        import matplotlib as mpl
+        import matplotlib.cm as cm
         import matplotlib.pyplot as plt
+
         if not which: which = ['magnetic-solenoidal']
+
+        xs = [ ]
+        ys = [ ]
+        ts = [ ]
+        ws = [ ]
+
         for n, dset in enumerate(self._h5file):
             if not dset.startswith('pspec'): continue
             if not n % skip == 0: continue
@@ -43,21 +54,44 @@ class MaraReductionsReader(MaraTool):
                 x = self._h5file[dset][w]['binloc']
                 y = self._h5file[dset][w]['binval']
                 t = self._h5file[dset][w]['time'].value
-                label = r'%s $t=%f$'%(w, t)
-                if tmax < 0.0 or (tmin < t < tmax):
-                    plt.loglog(x, y, label=label)
+                if tmin <= t <= tmax:
+                    xs.append(x)
+                    ys.append(y)
+                    ts.append(t)
+                    ws.append(w)
+
+        if cmap:
+            norm = mpl.colors.Normalize(vmin=ts[0], vmax=ts[-1])
+            cmap = cm.ScalarMappable(norm=norm, cmap=getattr(cm, cmap))
+
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+
+        for x, y, t, w in zip(xs, ys, ts, ws):
+            label = r'%s $t=%f$'%(w, t)
+            kwargs = dict(label=label,
+                          alpha=self.get_user_param('alpha', 1.0))
+            if cmap: kwargs['c'] = cmap.to_rgba(t)
+            ax1.loglog(x, y, **kwargs)
+
         if not nolegend:
             plt.legend(loc='best')
-        plt.xlabel(r'$k$')
-        plt.ylabel(r'$dP/dk$')
-        plt.title(title)
+
+        if self.get_user_param('xlim', False):
+            ax1.set_xlim(self.get_user_param('xlim', False))
+        if self.get_user_param('ylim', False):
+            ax1.set_ylim(self.get_user_param('ylim', False))
+        ax1.set_xlabel(r'$k$')
+        ax1.set_ylabel(r'$dP/dk$')
+        ax1.set_title(title)
         if hardcopy:
             plt.savefig(hardcopy)
         else:
             plt.show()
 
     @logmethod
-    def plot_single_power_spectrum(self, time, which, comp=0.0, **plot_args):
+    def plot_single_power_spectrum(self, time, which, comp=0.0, plot_axis=None,
+                                   **plot_args):
         import matplotlib.pyplot as plt
         dset = self.spectrum_near_time(time, which)
         N = len(self._h5file[dset][which]['binloc'])
@@ -67,7 +101,14 @@ class MaraReductionsReader(MaraTool):
         if 'label' not in plot_args:
             plot_args['label'] = r'%s:%s $t=%f$'%(self._h5file.filename,
                                                   which, t)
-        plt.loglog(x, y*x**comp, **plot_args)
+        if plot_axis is None:
+            fig = plt.figure()
+            ax1 = fig.add_subplot('111')
+        else:
+            ax1 = plot_axis
+        ax1.loglog(x, y*x**comp, **plot_args)
+        ax1.set_xlabel(r'$k L/2\pi$')
+        ax1.set_ylabel(r'$dP/dk$')
         return x, y
 
     @logmethod
@@ -83,7 +124,6 @@ class MaraReductionsReader(MaraTool):
         import matplotlib.pyplot as plt
         if not which: which = ['magnetic-solenoidal']
         if not kbins: kbins = [32]
-
         for kbin in kbins:
             for w in which:
                 ts = [ ]
@@ -99,3 +139,15 @@ class MaraReductionsReader(MaraTool):
         plt.legend(loc='best')
         plt.show()
 
+    @logmethod
+    def dump_npz(self):
+        dsets = { }
+        def cb(name, obj):
+            if isinstance(obj, h5py.Dataset):
+                if obj.shape:
+                    val = obj.value
+                else:
+                    val = [obj.value]
+                dsets[name.replace('/', '.')] = val
+        self._h5file.visititems(cb)
+        np.savez(self._h5file.filename.replace('.h5', '.npz'), **dsets)

@@ -8,34 +8,75 @@ class MaraCheckpointCutplaneExtractor(MaraTool):
     def __init__(self, filename):
         self._chkpt = h5py.File(filename, 'r')
 
+    def get_status(self, key):
+        return self._chkpt['status'][key].value
+
     @logmethod
     def plot_slice(self, field='rho', cmap='jet', axis=0, index=0,
-                   sax=None, noshow=True):
+                   plot_axis=None, noshow=True):
         import matplotlib.pyplot as plt
+
+        if plot_axis is None:
+            fig = plt.figure(figsize=[10,10])
+            sax = fig.add_subplot('111')
+        else:
+            fig = plot_axis.get_figure()
+            sax = plot_axis
+
         if axis == 0: imgdata = self._chkpt['prim'][field][index,:,:]
         if axis == 1: imgdata = self._chkpt['prim'][field][:,index,:]
         if axis == 2: imgdata = self._chkpt['prim'][field][:,:,index]
 
-        if sax is None:
-            fig = plt.figure(figsize=[10,10])
-            sax = fig.add_subplot('111')
-        else:
-            fig = sax.get_figure()
-        cax = sax.imshow(imgdata, origin='image', interpolation='nearest')
+        cax = sax.imshow(imgdata, cmap=cmap, origin='image',
+                         interpolation='nearest')
         sax.axes.get_xaxis().set_visible(False)
         sax.axes.get_yaxis().set_visible(False)
-        fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
-        fig.colorbar(cax, shrink=0.85, pad=0.0, aspect=20, cmap=cmap,
-                     orientation="horizontal")
+        if plot_axis is None:
+            # configure the colorbar for a particular layout if the caller did
+            # not supply its own plot_axis
+            fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
+            fig.colorbar(cax, ax=sax, shrink=0.85, pad=0.0, aspect=20,
+                         cmap=cmap, orientation="horizontal")
         plt.setp(sax.get_xticklabels(), visible=False)
         plt.setp(sax.get_yticklabels(), visible=False)
         if not noshow:
             plt.show()
 
     @logmethod
-    def plot_lic(self, index=0, texture=None):
+    def plot_streamlines(self, index=0, plot_axis=None, noshow=False):
+        import matplotlib.pyplot as plt
+
+        if plot_axis is None:
+            fig = plt.figure(figsize=[10,10])
+            sax = fig.add_subplot('111')
+        else:
+            fig = plot_axis.get_figure()
+            sax = plot_axis
+
+        v1 = self._chkpt['prim']['By'][index,:,:]
+        v2 = self._chkpt['prim']['Bz'][index,:,:]
+        N = v1.shape
+        x = np.arange(N[0])
+        y = np.arange(N[1])
+        sax.streamplot(x, y, v1, v2, color='brown', arrowsize=1e-4)
+        sax.axes.get_xaxis().set_visible(False)
+        sax.axes.get_yaxis().set_visible(False)
+        plt.setp(sax.get_xticklabels(), visible=False)
+        plt.setp(sax.get_yticklabels(), visible=False)
+        if not noshow:
+            plt.show()
+
+    @logmethod
+    def plot_lic(self, index=0, texture=None, plot_axis=None, noshow=False):
         import matplotlib.pyplot as plt
         from lic import lic_internal
+
+        if plot_axis is None:
+            fig = plt.figure(figsize=[10,10])
+            sax = fig.add_subplot('111')
+        else:
+            fig = plot_axis.get_figure()
+            sax = plot_axis
 
         v1 = self._chkpt['prim']['By'][index,:,:]
         v2 = self._chkpt['prim']['Bz'][index,:,:]
@@ -52,7 +93,13 @@ class MaraCheckpointCutplaneExtractor(MaraTool):
         kernel = np.sin(np.arange(kernellen)*np.pi/kernellen).astype(np.float32)
         image = lic_internal.line_integral_convolution(vectors, texture, kernel)
 
-        plt.imshow(image, cmap='bone', interpolation='nearest')
-        plt.show()
+        sax.imshow(image, cmap='bone', interpolation='nearest')
+        sax.axes.get_xaxis().set_visible(False)
+        sax.axes.get_yaxis().set_visible(False)
+        plt.setp(sax.get_xticklabels(), visible=False)
+        plt.setp(sax.get_yticklabels(), visible=False)
+
+        if not noshow:
+            plt.show()
 
         return texture

@@ -8,7 +8,9 @@ try:
     # sys.path += ['/path/containing/mara_tools']
     # ------------------------------------------------------------------
     import maratool_cfg
+    user_params = getattr(maratool_cfg, 'user_params', { })
 except ImportError:
+    user_params = { }
     pass
 
 
@@ -17,6 +19,7 @@ import argparse
 import pickle
 import numpy as np
 import h5py
+from mara_tools import toolbase
 from mara_tools import gaussfield
 from mara_tools import chkptlog
 from mara_tools import synchsky
@@ -25,6 +28,7 @@ from mara_tools import cutplanes
 from mara_tools import reductions
 from mara_tools import mhd_forces
 from mara_tools import pub_figs
+
 
 
 def cmd_gaussian_bfield():
@@ -224,6 +228,17 @@ def cmd_pspec_evolve():
 
 
 
+def cmd_dump_veusz():
+    cls = reductions.MaraReductionsReader
+    parser = argparse.ArgumentParser()
+    get_kwargs = cls.populate_parser('dump_veusz', parser)
+    parser.add_argument("filename")
+    pargs = parser.parse_args()
+    reduc = cls(pargs.filename)
+    reduc.dump_veusz(**get_kwargs(pargs))
+
+
+
 def cmd_magnetic_forces():
     import matplotlib.pyplot as plt
     cls = mhd_forces.MaraCheckpointForceCalculator
@@ -255,7 +270,9 @@ def cmd_magnetic_forces():
 
 
 
+
 if __name__ == "__main__":
+    toolbase.MaraTool.update_user_params(user_params)
 
     cmds = [c for c in dir() if c.startswith('cmd_')]
     figs = [c for c in dir(pub_figs) if c.startswith('fig_')]

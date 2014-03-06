@@ -41,3 +41,56 @@ def fig_power_spectrum_mach_boost():
               'with supersonic boosts (WENO-5)')
     plt.show()
 
+
+def fig_cutplane_pspec_hybrid():
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as ticker
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filenames", nargs='+', type=str)
+    parser.add_argument("--spec-file", type=str, required=True)
+    pargs = parser.parse_args()
+    pspec = reductions.MaraReductionsReader(pargs.spec_file)
+
+    hp = 0.05
+    vp = 0.12
+
+    pargs.filenames.sort()
+    cl = chkptlog.MaraCheckpointLoggedData(pargs.filenames[-1])
+
+    xfmt = ticker.ScalarFormatter()
+
+    for filename in pargs.filenames[:1]:
+        fig = plt.figure(figsize=[16,10])
+        ax1 = fig.add_axes([0.00+hp/2, 0.0+vp/2, 0.66-hp, 1.0-vp*0.8])
+        ax2 = fig.add_axes([0.66+hp/2, 0.5+vp/2, 0.33-hp, 0.5-vp*0.8], axisbg=[0.9,0.9,1.0])
+        ax3 = fig.add_axes([0.66+hp/2, 0.0+vp/2, 0.33-hp, 0.5-vp*0.8], axisbg=[0.9,0.9,1.0])
+
+        cp = cutplanes.MaraCheckpointCutplaneExtractor(filename)
+        cp.plot_slice(field='Bx', plot_axis=ax1, cmap='cubehelix', noshow=True)
+        #cp.plot_lic(plot_axis=ax1, noshow=True)
+        #cp.plot_streamlines(plot_axis=ax1, noshow=True)
+        cl.plot_fields(['mag', 'kin'], plot_axis=ax3, noshow=True, lw=3.0)
+
+        time = cp.get_status('CurrentTime')
+        pspec.plot_single_power_spectrum(time=time, which='magnetic-solenoidal',
+                                         plot_axis=ax2, lw=3.0, label='magnetic energy')
+        pspec.plot_single_power_spectrum(time=time, which='velocity-solenoidal',
+                                         plot_axis=ax2, lw=3.0, label='kinetic energy')
+        ax2.legend(loc='lower left')
+        ax2.set_xlim(2, 128)
+        ax2.set_xlabel('inverse scale', fontsize=18)
+        ax2.set_ylabel(r'$P(k)$', fontsize=18)
+
+        ax3.axvline(time, ls='-', lw=18.0, c='k', alpha=0.25)
+        ax3.set_xlim(0.0, cl.time[-1])
+        ax3.set_xlabel('time (Alfven crossing)', fontsize=18)
+        ax3.set_ylabel(r'energy', fontsize=18)
+
+        ax2.xaxis.set_major_formatter(xfmt)
+        ax3.xaxis.set_major_formatter(xfmt)
+
+        #plt.show()
+        plt.savefig(filename.replace('.h5', '.png'))
+        plt.clf()
+

@@ -94,7 +94,7 @@ class GaussianRandomVectorField3d(object):
             """
             a2 = self._K2.flat[np.argmin(abs(self._K2 - force_free**2))]
             Ak[:,self._K2 != a2] *= 0.0
-            if False:
+            if True:
                 """ use a different unit vector for each k """
                 ak = (np.abs(Ak[0])**2 + np.abs(Ak[1])**2 + np.abs(Ak[2])**2)**0.5
                 ak[ak == 0.0] = 1.0

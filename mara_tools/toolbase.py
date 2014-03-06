@@ -1,6 +1,13 @@
 import inspect
 
 class MaraTool(object):
+
+    _user_params = { }
+
+    @classmethod
+    def update_user_params(self, user_params):
+        self._user_params.update(user_params)
+
     @classmethod
     def populate_parser(self, method, parser):
         f = getattr(self, method)
@@ -26,3 +33,7 @@ class MaraTool(object):
                 return {k:v for k,v in vars(pargs).iteritems()
                         if k in self.my_args}
         return kwarg_getter(args)
+
+    def get_user_param(self, key, default=None):
+         cls_params = self._user_params.get(self.__class__.__name__, None)
+         return cls_params.get(key, default) if cls_params else default
