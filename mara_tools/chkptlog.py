@@ -50,4 +50,4 @@ class MaraCheckpointLoggedData(object):
         if plot_axis is None:
             ax1.legend(loc='best')
         if not noshow:
-            ax1.show()
+            plt.show()

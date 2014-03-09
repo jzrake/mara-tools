@@ -60,14 +60,14 @@ def fig_cutplane_pspec_hybrid():
 
     xfmt = ticker.ScalarFormatter()
 
-    for filename in pargs.filenames[:1]:
+    for filename in pargs.filenames:
         fig = plt.figure(figsize=[16,10])
         ax1 = fig.add_axes([0.00+hp/2, 0.0+vp/2, 0.66-hp, 1.0-vp*0.8])
         ax2 = fig.add_axes([0.66+hp/2, 0.5+vp/2, 0.33-hp, 0.5-vp*0.8], axisbg=[0.9,0.9,1.0])
         ax3 = fig.add_axes([0.66+hp/2, 0.0+vp/2, 0.33-hp, 0.5-vp*0.8], axisbg=[0.9,0.9,1.0])
 
         cp = cutplanes.MaraCheckpointCutplaneExtractor(filename)
-        cp.plot_slice(field='Bx', plot_axis=ax1, cmap='cubehelix', noshow=True)
+        cp.plot_slice(field='Bx', plot_axis=ax1, cmap='bone', noshow=True)
         #cp.plot_lic(plot_axis=ax1, noshow=True)
         #cp.plot_streamlines(plot_axis=ax1, noshow=True)
         cl.plot_fields(['mag', 'kin'], plot_axis=ax3, noshow=True, lw=3.0)
@@ -79,6 +79,7 @@ def fig_cutplane_pspec_hybrid():
                                          plot_axis=ax2, lw=3.0, label='kinetic energy')
         ax2.legend(loc='lower left')
         ax2.set_xlim(2, 128)
+        ax2.set_ylim(1e-12, 1e-1)
         ax2.set_xlabel('inverse scale', fontsize=18)
         ax2.set_ylabel(r'$P(k)$', fontsize=18)
 
