@@ -119,7 +119,8 @@ class StokesVectorsImage(object):
         self.U = h5file['stokes-U'][:]
         self.P = h5file['polarization'][:]
         self.axis = h5file.attrs['axis']
-        self.filename = h5file.attrs['filename']
+        self.filename_orig = h5file.attrs['filename']
+        self.filename_synch = filename
 
     @logmethod
     def save(self, outfile):
@@ -150,23 +151,33 @@ class StokesVectorsImage(object):
         plt.show()   
 
     @logmethod
-    def make_figures2(self):
+    def make_figures2(self, cmap='bone', hardcopy=False):
         import matplotlib.pyplot as plt
         si, sq, su, fp = self.I, self.Q, self.U, self.P
-        plt.figure(figsize=(10,12))
-        plt.imshow(si, origin='lower')
-        plt.colorbar(orientation='horizontal')
-        plt.title("Stokes-I: axis %d" % self.axis)
-        plt.figure(figsize=(10,12))
-        plt.imshow(sq, origin='lower')
-        plt.colorbar(orientation='horizontal')
-        plt.title("Stokes-Q: axis %d" % self.axis)
-        plt.figure(figsize=(10,12))
-        plt.imshow(su, origin='lower')
-        plt.colorbar(orientation='horizontal')
-        plt.title("Stokes-U: axis %d" % self.axis)
-        plt.figure(figsize=(10,12))
-        plt.imshow(fp, origin='lower')
-        plt.colorbar(orientation='horizontal')
-        plt.title("Polarization fraction: axis %d" % self.axis)
-        plt.show()   
+
+        for s, short, t in zip([si, sq, su, fp],
+                        ['si', 'sq', 'su', 'fp'],
+                        ["Stokes-I: axis %d" % self.axis,
+                         "Stokes-Q: axis %d" % self.axis,
+                         "Stokes-U: axis %d" % self.axis,
+                         "Polarization fraction: axis %d" % self.axis]):
+
+            fig = plt.figure(figsize=(10,12))
+            sax = plt.gca()
+            cax = sax.imshow(s, origin='lower', cmap=cmap)
+            sax.set_title(t)
+            fig.colorbar(cax, ax=sax, shrink=1.0, pad=0.0, aspect=40,
+                         cmap=cmap, orientation="horizontal")
+            fig.subplots_adjust(left=0.02, right=0.98, bottom=0.02, top=0.98)
+            plt.setp(sax.get_xticklabels(), visible=False)
+            plt.setp(sax.get_yticklabels(), visible=False)
+            sax.axes.get_xaxis().set_visible(False)
+            sax.axes.get_yaxis().set_visible(False)
+
+            if hardcopy:
+                plt.savefig(self.filename_synch.replace(
+                        '.h5', '-%s.png'%short))
+                plt.clf()
+
+        if not hardcopy:
+            plt.show()   

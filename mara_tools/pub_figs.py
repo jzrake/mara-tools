@@ -95,3 +95,25 @@ def fig_cutplane_pspec_hybrid():
         plt.savefig(filename.replace('.h5', '.png'))
         plt.clf()
 
+
+def fig_cutplane_four_panel():
+    import matplotlib.pyplot as plt
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filenames", nargs=4, type=str)
+    pargs = parser.parse_args()
+
+    pargs.filenames.sort()
+
+    fig = plt.figure(figsize=[12,4])
+    ax1 = fig.add_axes([0.00, 0.0, 0.25, 1.0])
+    ax2 = fig.add_axes([0.25, 0.0, 0.25, 1.0])
+    ax3 = fig.add_axes([0.50, 0.0, 0.25, 1.0])
+    ax4 = fig.add_axes([0.75, 0.0, 0.25, 1.0])
+
+    for ax, filename in zip([ax1, ax2, ax3, ax4], pargs.filenames):
+        cp = cutplanes.MaraCheckpointCutplaneExtractor(filename)
+        cp.plot_slice(field='Bx', plot_axis=ax, cmap='bone', noshow=True)
+
+    plt.show()
+
