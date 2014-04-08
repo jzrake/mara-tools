@@ -17,8 +17,12 @@ class MaraCheckpointCreator(object):
         status['Checkpoint'] = 0.0
         status['CurrentTime'] = 0.0
         status['Iteration'] = 0.0
-        status['LastMeasurementTime'] = 0.0
         status['Timestep'] = 0.0
+        status['LastMeasurementTime'] = 0.0
+        status['LastSpectrumTime'] = 0.0
+        status['LastCutplaneTime'] = 0.0
+        status['LastPdfTime'] = 0.0
+
 
         dsetnames = ['rho', 'pre', 'vx', 'vy', 'vz']
         if mhd: dsetnames += ['Bx', 'By', 'Bz']

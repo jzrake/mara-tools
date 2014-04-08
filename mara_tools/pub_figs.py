@@ -117,3 +117,128 @@ def fig_cutplane_four_panel():
 
     plt.show()
 
+
+def fig_cascade_pspec_evolve():
+    import matplotlib.pyplot as plt
+
+    def ax_params(**kwargs):
+        params = {
+            'MaraReductionsReader': {
+                'kcut': [0.0, 128.0],
+                'xlim': [2.0/1.25, 128.0*1.25],
+                'alpha': 1.0,
+                'comp': 0.0,
+                }
+            }
+        params['MaraReductionsReader'].update(kwargs)
+        return params
+
+    def trim_yaxis(ax):
+        yl = ax.get_ylim()
+        ax.set_ylim(yl[0]*1.001, yl[1]/1.001)
+
+    ax1_params = ax_params(ylabel=r'$P_B(k)$', xlabel='')
+    ax2_params = ax_params(ylabel=r'$P_{v,s}(k)$', xlabel='')
+    ax3_params = ax_params(ylabel=r'$P_{v,d}(k)$', xlabel=r'$k L/2\pi$')
+
+    y0 = 0.05
+    fig = plt.figure(figsize=[6,12])
+    ax1 = fig.add_subplot('311')
+    ax2 = fig.add_subplot('312')
+    ax3 = fig.add_subplot('313')
+
+    cls = reductions.MaraReductionsReader
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+    pargs = parser.parse_args()
+    reduc = cls(pargs.filename)
+
+    skip = 100
+    reduc.set_show_action('hold')
+    reduc.set_plot_axes(ax1)
+    reduc.update_user_params(ax1_params)
+    reduc.plot_power_spectra(which=['magnetic-solenoidal'],
+                             tmin=0.00,
+                             skip=skip,
+                             nolegend=True,
+                             cmap='gnuplot')
+    reduc.set_plot_axes(ax2)
+    reduc.update_user_params(ax2_params)
+    reduc.plot_power_spectra(which=['velocity-solenoidal'],
+                             tmin=0.01,
+                             skip=skip,
+                             nolegend=True,
+                             cmap='gnuplot')
+    reduc.set_plot_axes(ax3)
+    reduc.update_user_params(ax3_params)
+    reduc.plot_power_spectra(which=['velocity-dilatational'],
+                             tmin=0.01,
+                             skip=skip,
+                             nolegend=True,
+                             cmap='gnuplot')
+
+    ax1.axes.get_xaxis().set_visible(False)
+    ax2.axes.get_xaxis().set_visible(False)
+
+    trim_yaxis(ax1)
+    trim_yaxis(ax2)
+    trim_yaxis(ax3)
+
+    x = np.linspace(2.0, 128.0, 1000)
+    y1 = 5e-3 * x**-2.0
+    y2 = 5e-6 * x**-0.5
+    ax1.loglog(x, y1, '--', c='k', lw=2.0)
+    ax2.loglog(x, y2, '--', c='k', lw=2.0)
+
+    for ax, letter, text in zip([ax1, ax2, ax3],
+                        "abc",
+                        [r"$P_B(k) \propto k^{-2}$",
+                         r"$P_{v,s}(k) \propto k^{-1/2}$",
+                         ""]):
+        ax.text(0.1, 0.4, text, transform=ax.transAxes, fontsize=16)
+        ax.text(0.05, 0.05, r"$(%c)$"%letter, transform=ax.transAxes, fontsize=16)
+
+    fig.subplots_adjust(left=0.15, bottom=0.05, right=0.98, top=0.98, hspace=0.0)
+    plt.show()
+
+
+def fig_cascade_peak_power_evolve():
+    import matplotlib.pyplot as plt
+
+    def fit_loglog(X, Y, x0, x1, *args, **kwargs):
+        x = X[(X<x1)*(X>x0)]
+        y = Y[(X<x1)*(X>x0)]
+        m = np.log10(y[-1]/y[0])/np.log10(x[-1]/x[0])
+        z = y[0] * (x/x[0])**m
+        plt.loglog(x, 1.1 * z, *args, **kwargs)
+        return m, z
+
+    cls = reductions.MaraReductionsReader
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+    pargs = parser.parse_args()
+    reduc = cls(pargs.filename)
+
+    t, k, P = reduc.rms_wavenumber_all('magnetic-solenoidal')
+    m, z = fit_loglog(t, 1/k, 1.0, 100.0, ls='--', c='k')
+    plt.loglog(t, 1/k, lw=1.5, c='b',
+               label=r'magnetic $\lambda_{RMS} \propto t^{%3.2f}$'%m)
+
+    t, k, P = reduc.rms_wavenumber_all('velocity-solenoidal')
+    m, z = fit_loglog(t, 1/k, 1.0, 100.0, ls='--', c='k')
+    plt.loglog(t, 1/k, lw=1.5, c='g',
+               label=r'solenoidal velocity $\lambda_{RMS} \propto t^{%3.2f}$'%m)
+
+    t, k, P = reduc.rms_wavenumber_all('velocity-dilatational')
+    m, z = fit_loglog(t, 1/k, 1.0, 100.0, ls='--', c='k')
+    plt.loglog(t, 1/k, lw=1.5, c='r',
+               label=r'dilatational velocity $\lambda_{RMS} \propto t^{%3.2f}$'%m)
+
+
+    plt.xlabel(r'$t$', fontsize=18)
+    plt.ylabel(r'$\lambda_{RMS}$', fontsize=18)
+    plt.xlim(min(t)/1.1, max(t)*1.1)
+    #plt.ylim(1e-2, 2e-1)
+
+    plt.legend(loc='best')
+    plt.show()

@@ -28,7 +28,7 @@ from mara_tools import cutplanes
 from mara_tools import reductions
 from mara_tools import mhd_forces
 from mara_tools import pub_figs
-
+from mara_tools import m2reader
 
 
 def cmd_gaussian_bfield():
@@ -55,6 +55,8 @@ def cmd_gaussian_bfield():
                         default=1.0)
     parser.add_argument("--force-free", type=float, default=None,
                         help="create force-balanced initial magnetic field")
+    parser.add_argument("--density", type=float, default=1.0,
+                        help="gas density (pressure is always 1.0)")
     parser.add_argument("-N", "--resolution", type=int,
                         help="domain resulution (N^3)", default=32)
     parser.add_argument("--spectrum", type=str,
@@ -121,7 +123,7 @@ def cmd_gaussian_bfield():
 
     def callback_srmhd(prim):
         prim['pre'][:] = 1.0
-        prim['rho'][:] = 1.0
+        prim['rho'][:] = pargs.density
         prim['vx'][:] = 0.0
         prim['vy'][:] = 0.0
         prim['vz'][:] = 0.0
@@ -131,7 +133,7 @@ def cmd_gaussian_bfield():
 
     def callback_nrhyd(prim):
         prim['pre'][:] = 1.0
-        prim['rho'][:] = 1.0
+        prim['rho'][:] = pargs.density
         prim['vx'][:] = B[0]
         prim['vy'][:] = B[1]
         prim['vz'][:] = B[2]
@@ -238,6 +240,35 @@ def cmd_dump_veusz():
     pargs = parser.parse_args()
     reduc = cls(pargs.filename)
     reduc.dump_veusz(**get_kwargs(pargs))
+
+
+
+def cmd_make_1d_plots():
+    import matplotlib.pyplot as plt
+    parser = argparse.ArgumentParser()
+    cls = m2reader.M2CheckpointReader
+    parser.add_argument("filenames", nargs='+')
+    pargs = parser.parse_args()
+    for filename in reversed(pargs.filenames):
+        chkpt = cls(filename)
+        chkpt.set_show_action('hold')
+        chkpt.make_1d_plots()
+    plt.show()
+
+
+
+def cmd_make_2d_plots():
+    import matplotlib.pyplot as plt
+    parser = argparse.ArgumentParser()
+    cls = m2reader.M2CheckpointReader
+    parser.add_argument("filenames", nargs='+')
+    parser.add_argument("--field", required=True)
+    pargs = parser.parse_args()
+    for filename in reversed(pargs.filenames):
+        chkpt = cls(filename)
+        chkpt.set_show_action('hold')
+        chkpt.make_2d_plots(field=pargs.field)
+    plt.show()
 
 
 
