@@ -9,6 +9,9 @@ class MaraCheckpointForceCalculator(MaraTool):
     def __init__(self, filename):
         self._h5file = h5py.File(filename, 'r')
 
+    def close(self):
+        self._h5file.close()
+
     @logmethod
     def magnetic_field(self):
         B = np.array([self._h5file['prim']['Bx'][:],

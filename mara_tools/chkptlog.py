@@ -19,6 +19,8 @@ class MaraCheckpointLoggedData(object):
         self.max_T   = array([entry["max_T"  ] for entry in log])
         self.mean_Ms = array([entry["mean_Ms"] for entry in log])
         self.max_Ms  = array([entry["max_Ms" ] for entry in log])
+        self.mean_Ma = array([entry["mean_Ma"] for entry in log])
+        self.min_Ma  = array([entry["min_Ma" ] for entry in log])
         self.kin     = array([entry["energies"]["kinetic" ] for entry in log])
         self.tie     = array([entry["energies"]["internal"] for entry in log])
         self.mag     = array([entry["energies"]["magnetic"] for entry in log])
@@ -40,10 +42,11 @@ class MaraCheckpointLoggedData(object):
         for field in fields:
             y = getattr(self, field)
             plt.loglog(self.time, y, label=field, **plot_args)
+            #plt.plot(self.time, y, label=field, **plot_args)
         #ax1.loglog(self.time[1:], 1e-3*self.time[1:]**(-4./3.),
         #           ls='--', c='k', label=r'$t^{-4/3}$')
-        ax1.loglog(self.time[1:], 1e-2*self.time[1:]**(-3./3.),
-                   ls='--', c='k', label=r'$t^{-1}$')
+        #ax1.loglog(self.time[1:], 1e-2*self.time[1:]**(-3./3.),
+        #           ls='--', c='k', label=r'$t^{-1}$')
         ax1.set_xlabel(r"$t$")
         ax1.set_ylabel(r"energy")
 

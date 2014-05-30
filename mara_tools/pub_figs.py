@@ -147,11 +147,10 @@ def fig_cascade_pspec_evolve():
     ax2 = fig.add_subplot('312')
     ax3 = fig.add_subplot('313')
 
-    cls = reductions.MaraReductionsReader
     parser = argparse.ArgumentParser()
     parser.add_argument("filename")
     pargs = parser.parse_args()
-    reduc = cls(pargs.filename)
+    reduc = reductions.MaraReductionsReader(pargs.filename)
 
     skip = 100
     reduc.set_show_action('hold')
@@ -205,40 +204,86 @@ def fig_cascade_pspec_evolve():
 def fig_cascade_peak_power_evolve():
     import matplotlib.pyplot as plt
 
-    def fit_loglog(X, Y, x0, x1, *args, **kwargs):
+    fig = plt.figure(figsize=[8,10])
+    ax1 = fig.add_subplot('211')
+    ax2 = fig.add_subplot('212')
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+    parser.add_argument("checkpoint")
+    pargs = parser.parse_args()
+    reduc = reductions.MaraReductionsReader(pargs.filename)
+    log = chkptlog.MaraCheckpointLoggedData(pargs.checkpoint)
+
+    def fit_loglog(X, Y, x0, x1, ax, voffs=1.1, *args, **kwargs):
         x = X[(X<x1)*(X>x0)]
         y = Y[(X<x1)*(X>x0)]
         m = np.log10(y[-1]/y[0])/np.log10(x[-1]/x[0])
         z = y[0] * (x/x[0])**m
-        plt.loglog(x, 1.1 * z, *args, **kwargs)
+        ax.loglog(x, voffs * z, *args, **kwargs)
         return m, z
 
-    cls = reductions.MaraReductionsReader
-    parser = argparse.ArgumentParser()
-    parser.add_argument("filename")
-    pargs = parser.parse_args()
-    reduc = cls(pargs.filename)
+    skip = 1
 
-    t, k, P = reduc.rms_wavenumber_all('magnetic-solenoidal')
-    m, z = fit_loglog(t, 1/k, 1.0, 100.0, ls='--', c='k')
-    plt.loglog(t, 1/k, lw=1.5, c='b',
+    t, k, P = reduc.rms_wavenumber_all('magnetic-solenoidal', skip=skip)
+    m, z = fit_loglog(t, 1/k, 1.0, 100.0, ax2, ls='--', c='k')
+    ax2.loglog(t, 1/k, lw=1.5, c='b',
                label=r'magnetic $\lambda_{RMS} \propto t^{%3.2f}$'%m)
 
-    t, k, P = reduc.rms_wavenumber_all('velocity-solenoidal')
-    m, z = fit_loglog(t, 1/k, 1.0, 100.0, ls='--', c='k')
-    plt.loglog(t, 1/k, lw=1.5, c='g',
+    t, k, P = reduc.rms_wavenumber_all('velocity-solenoidal', skip=skip)
+    m, z = fit_loglog(t, 1/k, 1.0, 100.0, ax2, ls='--', c='k')
+    ax2.loglog(t, 1/k, lw=1.5, c='g',
                label=r'solenoidal velocity $\lambda_{RMS} \propto t^{%3.2f}$'%m)
 
-    t, k, P = reduc.rms_wavenumber_all('velocity-dilatational')
-    m, z = fit_loglog(t, 1/k, 1.0, 100.0, ls='--', c='k')
-    plt.loglog(t, 1/k, lw=1.5, c='r',
+    t, k, P = reduc.rms_wavenumber_all('velocity-dilatational', skip=skip)
+    m, z = fit_loglog(t, 1/k, 1.0, 100.0, ax2, ls='--', c='k')
+    ax2.loglog(t, 1/k, lw=1.5, c='r',
                label=r'dilatational velocity $\lambda_{RMS} \propto t^{%3.2f}$'%m)
 
+    m_mag, z_mag = fit_loglog(log.time, log.mag, 1.0, 100.0, ax1, voffs=2, ls='--', c='k')
+    m_kin, z_kin = fit_loglog(log.time, log.kin, 1.0, 100.0, ax1, voffs=2, ls='--', c='k')
 
-    plt.xlabel(r'$t$', fontsize=18)
-    plt.ylabel(r'$\lambda_{RMS}$', fontsize=18)
-    plt.xlim(min(t)/1.1, max(t)*1.1)
-    #plt.ylim(1e-2, 2e-1)
+    ax1.loglog(log.time, log.mag, c='b', lw=1.5, label='magnetic $\propto t^{%3.2f}$'%m_mag)
+    ax1.loglog(log.time, log.kin, c='g', lw=1.5, label='kinetic $\propto t^{%3.2f}$'%m_kin)
+    ax1.axes.get_xaxis().set_visible(False)
 
-    plt.legend(loc='best')
+    ax2.set_xlabel(r'$t$', fontsize=18)
+    ax2.set_ylabel(r'$\lambda_{RMS}$', fontsize=18)
+    ax1.set_ylabel(r'energy', fontsize=18)
+    ax1.set_xlim(min(t)/1.1, max(t)*1.1)
+    ax2.set_xlim(min(t)/1.1, max(t)*1.1)
+    ax1.set_ylim(9e-7, 8e-1)
+    ax2.set_ylim(1e-2, 2e-1)
+    ax1.legend(loc='best')
+    ax2.legend(loc='best')
+    fig.subplots_adjust(hspace=0)
+    plt.show()
+
+
+def fig_cascade_resolution_mag_decay():
+    import matplotlib.pyplot as plt
+    import json
+
+    fig = plt.figure(figsize=[10,8])
+    ax1 = fig.add_subplot('111')
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filenames", nargs=4)
+    pargs = parser.parse_args()
+
+    for filename in pargs.filenames:
+        chkpt = h5py.File(filename, 'r')
+        runargs = json.loads(chkpt['runargs'].value)
+        N = int(runargs['N'])
+        chkpt.close()
+
+        log = chkptlog.MaraCheckpointLoggedData(filename)
+        ax1.loglog(log.time, log.mag, lw=1.5, label='magnetic'+' '+filename)
+        if N == 512:
+            ax1.text(log.time[1]/2, 0.5, r'$%d^3$'%N, fontsize=18)
+        else:
+            ax1.text(log.time[1]/1, 0.5, r'$%d^3$'%N, fontsize=18)
+
+    ax1.set_xlabel('time (Alfven crossings)', fontsize=18)
+    ax1.set_ylabel('magnetic energy', fontsize=18)
     plt.show()

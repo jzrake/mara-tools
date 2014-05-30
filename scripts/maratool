@@ -303,6 +303,28 @@ def cmd_magnetic_forces():
 
 
 
+def cmd_write_current():
+    import matplotlib.pyplot as plt
+    cls = mhd_forces.MaraCheckpointForceCalculator
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+    parser.add_argument("--method", default="spectral",
+                        choices=["spectral", "finite-difference"])
+    pargs = parser.parse_args()
+    chkpt = cls(pargs.filename)
+
+    J = chkpt.curlB()
+    chkpt.close()
+
+    h5f = h5py.File(pargs.filename)
+    if 'current' in h5f:
+        del h5f['current']
+    h5f.require_group('current')
+    h5f['current']['x'] = J[0]
+    h5f['current']['y'] = J[1]
+    h5f['current']['z'] = J[2]
+    h5f.close()
+
 
 if __name__ == "__main__":
     toolbase.MaraTool.update_user_params(user_params)
