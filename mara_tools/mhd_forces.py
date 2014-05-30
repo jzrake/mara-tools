@@ -8,15 +8,19 @@ class MaraCheckpointForceCalculator(MaraTool):
     @logmethod
     def __init__(self, filename):
         self._h5file = h5py.File(filename, 'r')
+        self._cached_field = None
 
     def close(self):
         self._h5file.close()
 
     @logmethod
     def magnetic_field(self):
+        if self._cached_field is not None:
+            return self._cached_field
         B = np.array([self._h5file['prim']['Bx'][:],
                       self._h5file['prim']['By'][:],
                       self._h5file['prim']['Bz'][:]])
+        self._cached_field = B
         return B
 
     def get_ks(self, shape):
@@ -82,10 +86,44 @@ class MaraCheckpointForceCalculator(MaraTool):
         N = B.shape[1:]
         d = lambda f, a: five_point_deriv(f, a, h=1.0/N[a])
         curl = np.zeros_like(B)
-        curl[0] = d(B[0], 2) - d(B[2], 0)
-        curl[1] = d(B[1], 0) - d(B[0], 1)
-        curl[2] = d(B[2], 1) - d(B[1], 2)
+        curl[0] = d(B[2], 1) - d(B[1], 2)
+        curl[1] = d(B[0], 2) - d(B[2], 0)
+        curl[2] = d(B[1], 0) - d(B[0], 1)
         return curl
+
+    @logmethod
+    def curlA(self):
+        A = self.vector_potential()
+        N = A.shape[1:]
+        d = lambda f, a: five_point_deriv(f, a, h=1.0/N[a])
+        curl = np.zeros_like(A)
+        curl[0] = d(A[2], 1) - d(A[1], 2)
+        curl[1] = d(A[0], 2) - d(A[2], 0)
+        curl[2] = d(A[1], 0) - d(A[0], 1)
+        return curl
+
+    @logmethod
+    def vector_potential(self):
+        Bx = self.magnetic_field()
+        Bk = np.fft.fftn(Bx, axes=[1,2,3])
+        Ks = self.get_ks(Bx.shape)
+        K2 = Ks[0]**2 + Ks[1]**2 + Ks[2]**2
+        K2[0,0,0] = 1.0
+
+        Ak = np.zeros_like(Bk)
+        Ak[0] = 1.j * (Ks[1]*Bk[2] - Ks[2]*Bk[1]) / K2
+        Ak[1] = 1.j * (Ks[2]*Bk[0] - Ks[0]*Bk[2]) / K2
+        Ak[2] = 1.j * (Ks[0]*Bk[1] - Ks[1]*Bk[0]) / K2
+
+        Ax = np.fft.ifftn(Ak, axes=[1,2,3]).real
+        return Ax
+
+    @logmethod
+    def helicity(self):
+        B = self.magnetic_field()
+        A = self.vector_potential()
+        return A[0]*B[0] + A[1]*B[1] + A[2]*B[2]
+
 
 
 def five_point_deriv(f, axis=0, h=1.0):
@@ -93,6 +131,7 @@ def five_point_deriv(f, axis=0, h=1.0):
             +8*np.roll(f, -1, axis) + 
             -8*np.roll(f, +1, axis) + 
             +1*np.roll(f, +2, axis)) / (12.0 * h)
+
 
 
 if __name__ == "__main__":

@@ -303,6 +303,38 @@ def cmd_magnetic_forces():
 
 
 
+def cmd_magnetic_helicity():
+    import matplotlib.pyplot as plt
+    cls = mhd_forces.MaraCheckpointForceCalculator
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+    pargs = parser.parse_args()
+    chkpt = cls(pargs.filename)
+
+    B = chkpt.magnetic_field()
+    A = chkpt.vector_potential()
+    D = chkpt.curlA()
+    H = chkpt.helicity() / (B[0]**2 + B[1]**2 + B[2]**2)
+
+    plt.hist(H.flat, bins=256, histtype='step', log=True)
+    print H.mean()
+
+    #plt.figure()
+    #plt.imshow(B[0,0], interpolation='nearest')
+    #plt.title('B')
+    #plt.colorbar()
+    #plt.figure()
+    #plt.imshow(A[0,0], interpolation='nearest')
+    #plt.title('A')
+    #plt.colorbar()
+    #plt.figure()
+    #plt.imshow(D[0,0], interpolation='nearest')
+    #plt.title('D')
+    #plt.colorbar()
+    plt.show()
+
+
+
 def cmd_write_current():
     import matplotlib.pyplot as plt
     cls = mhd_forces.MaraCheckpointForceCalculator
